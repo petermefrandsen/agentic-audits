@@ -243,10 +243,10 @@ runs:
         run_agent() {
           local flags="${1:-}"
           # shellcheck disable=SC2086
-          gh copilot suggest \
-            --target shell \
+          gh copilot \
+            --allow-all-tools \
+            -p "${FULL_MISSION}" \
             ${flags} \
-            "${FULL_MISSION}" \
             2>&1
         }
 

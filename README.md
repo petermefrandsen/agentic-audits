@@ -49,8 +49,7 @@ graph TD
 2. **Review Sources**: Check `.github/sources.yml` to enable/disable documentation sources.
 3. **Local Development (Optional)**:
    - Run `npm install` to set up dependencies.
-   - Configure local agents (e.g. Cursor) using `.cursor/mcp.json`.
-   - You'll need a [Context7 API Key](https://context7.com/dashboard) if using the local MCP server.
+
 
 ## Hub Action (`.github/actions/headless-agent`)
 
