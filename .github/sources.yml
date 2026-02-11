@@ -16,7 +16,7 @@ sources:
   # ── MCP Servers ──────────────────────────────────────────────────────────
   - name: context7
     type: mcp
-    package: "@modelcontextprotocol/server-context7"
+    package: "@upstash/context7-mcp"
     enabled: true
 
   # ── Web Documentation Sources ────────────────────────────────────────────

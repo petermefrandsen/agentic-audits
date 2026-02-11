@@ -1,16 +1,13 @@
-# agentic-audits
+# Agentic Audits
 
 > Automated governance for AI assets using headless GitHub Copilot agents.
 
 ## Overview
 
-This repository provides a **reusable Hub action** for running headless AI agent workflows that audit, review, and refactor code and prompts — plus example "spoke" workflows and Copilot Skills you can copy into any repository.
+This repository provides a **Hub and Spoke** architecture for running headless AI agent workflows that audit, review, and refactor code and prompts.
 
 ```mermaid
 graph TD
-    subgraph "Any Repository"
-        S1["Your Workflow<br/>(trigger + mission)"]
-    end
     subgraph "agentic-audits (this repo)"
         HUB["Hub Action<br/>.github/actions/headless-agent"]
         SK["Skills<br/>.github/skills/*"]
@@ -18,21 +15,21 @@ graph TD
     end
     S1 -->|"uses"| HUB
     HUB --> SK
-    HUB --> SRC
-    HUB --> N["Node.js + gh CLI + Copilot"]
-    HUB --> MCP["Context7 MCP + extra sources"]
-    HUB --> RUN["Execute Mission<br/>(with model fallback)"]
+    HUB -.->|"reads"| SRC
+
+    subgraph "Spokes (Workflow Files)"
+        S1["Weekly Prompt Audit<br/>(Cron)"]
+        S2["Doc Sync<br/>(Manual)"]
+    end
 ```
 
-### File Tree
-
-```
+### File Structure
+```bash
 .
 ├── .github/
 │   ├── actions/
-│   │   └── headless-agent/
-│   │       └── action.yml              ← Hub (Composite Action)
-│   ├── skills/
+│   │   └── headless-agent/action.yml   ← The Hub (Composite Action)
+│   ├── skills/                         ← Reusable Copilot Skills
 │   │   ├── prepare-pr/SKILL.md         ← Skill: create PRs from changes
 │   │   ├── docs-writer/SKILL.md        ← Skill: write/update documentation
 │   │   └── code-reviewer/SKILL.md      ← Skill: structured code review
@@ -46,47 +43,18 @@ graph TD
 └── README.md
 ```
 
----
+## Setup
 
-## Quick Start
+1. **Add Secrets**: Add `COPILOT_GOV_TOKEN` to your repo secrets.
+2. **Review Sources**: Check `.github/sources.yml` to enable/disable documentation sources.
+3. **Local Development (Optional)**:
+   - Run `npm install` to set up dependencies.
+   - Configure local agents (e.g. Cursor) using `.cursor/mcp.json`.
+   - You'll need a [Context7 API Key](https://context7.com/dashboard) if using the local MCP server.
 
-### 1. Create the `COPILOT_GOV_TOKEN` secret
+## Hub Action (`.github/actions/headless-agent`)
 
-1. Go to **Settings → Secrets and variables → Actions**.
-2. Click **New repository secret**.
-3. **Name:** `COPILOT_GOV_TOKEN`
-4. **Value:** A GitHub PAT with **Copilot** access.
-
-### 2. Use the Hub action in your workflow
-
-The hub action can be used **from this repository or from any other repository**:
-
-```yaml
-# In YOUR repository's .github/workflows/my-audit.yml
-name: "My Custom Audit"
-on:
-  workflow_dispatch:
-
-jobs:
-  audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: your-org/agentic-audits/.github/actions/headless-agent@main
-        with:
-          mission: "Review all Python files for security issues."
-          context_files: "src/**/*.py"
-          github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
-          model: "gpt-4o"
-          fallback_model: "gpt-4o-mini"
-```
-
-> **Tip:** Replace `your-org/agentic-audits` with the actual owner/repo, or use `./.github/actions/headless-agent` if the workflow lives in this repository.
-
----
-
-## Hub Action Reference
+The core logic resides here. It installs the `gh` CLI, the Copilot extension, and handles authentication.
 
 ### Inputs
 
@@ -101,10 +69,10 @@ jobs:
 
 ### What it does
 
-1. **Installs** Node.js 20, `gh` CLI, and the `gh-copilot` extension.
+1. **Sets up** GitHub CLI and `gh-copilot` extension.
 2. **Loads** `.github/sources.yml` to configure MCP servers and web documentation sources.
 3. **Authenticates** with the provided token.
-4. **Executes** `gh copilot suggest --cli` with the mission prompt.
+4. **Executes** `gh copilot suggest --target shell` with the mission prompt.
 5. **Falls back** to the `fallback_model` if the primary model fails (e.g. quota exceeded).
 
 ---
@@ -115,100 +83,38 @@ Control which external documentation the agent can access:
 
 ```yaml
 sources:
-  # MCP servers — installed via npm and registered with Copilot
   - name: context7
     type: mcp
-    package: "@modelcontextprotocol/server-context7"
+    package: "@upstash/context7-mcp"
     enabled: true
 
-  # Web sources — URLs injected into the mission prompt
   - name: langchain-docs
     type: web
     url: "https://python.langchain.com/docs/"
     enabled: true
-
-  - name: openai-api-ref
-    type: web
-    url: "https://platform.openai.com/docs/api-reference"
-    enabled: false   # disabled — won't be used
 ```
 
-| Field | Description |
-|-------|-------------|
-| `name` | Unique identifier for the source |
-| `type` | `mcp` (Model Context Protocol server) or `web` (URL) |
-| `package` | *(mcp only)* npm package name |
-| `url` | *(web only)* Documentation URL |
-| `enabled` | Set `false` to disable without removing |
-
 ---
 
-## Copilot Skills
+## Adding a Spoke
 
-Skills are reusable instruction sets in `.github/skills/` that Copilot automatically discovers and applies when relevant to a mission.
+Create a new workflow file in `.github/workflows/` that uses the hub action.
 
-| Skill | Purpose |
-|-------|---------|
-| [`prepare-pr`](.github/skills/prepare-pr/SKILL.md) | Create branches, commit changes, and open structured PRs |
-| [`docs-writer`](.github/skills/docs-writer/SKILL.md) | Write or update documentation with consistent formatting |
-| [`code-reviewer`](.github/skills/code-reviewer/SKILL.md) | Structured code review with severity levels and actionable fixes |
-
-### Adding custom skills
-
-Create a new directory under `.github/skills/` with a `SKILL.md` file:
-
-```markdown
----
-name: my-custom-skill
-description: >
-  One-line description of when Copilot should use this skill.
----
-
-# My Custom Skill
-
-## When to use
-...
-
-## Instructions
-...
-```
-
-> Browse community skills at [skillsmp.com](https://skillsmp.com/) for inspiration and ready-made skill definitions.
-
----
-
-## Example Spokes
-
-The workflows in `.github/workflows/` are **examples** — copy and adapt them for your own use cases.
-
-### Weekly Prompt Audit
-
-**Trigger:** Cron (every Monday 07:00 UTC) + manual  
-**Mission:** Review all markdown files in `/prompts` for clarity, safety, and conciseness.
-
-### On-Demand Doc Sync
-
-**Trigger:** Manual (`workflow_dispatch`)  
-**Mission:** Fetch latest external docs via Context7 and update an internal guide.
-
-### Creating your own spoke
+**Example:**
 
 ```yaml
 name: "My Custom Audit"
-on:
-  schedule:
-    - cron: "0 9 * * 5"  # every Friday at 09:00 UTC
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: your-org/agentic-audits/.github/actions/headless-agent@main
+      - uses: ./.github/actions/headless-agent
         with:
           mission: |
-            Your detailed mission prompt here.
+            Review src/*.ts files for security vulnerabilities.
             Be specific about what files to review and what to look for.
           context_files: "src/**/*.ts"
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
@@ -219,6 +125,9 @@ jobs:
 
 ---
 
-## License
+## Copilot Skills
 
-See [LICENSE](LICENSE).
+Reusable skills located in `.github/skills/` provide structured instructions for common tasks.
+Reference them in your mission prompt: "Use the `prepare-pr` skill to create a PR."
+
+Check the `SKILL.md` files for usage details.
