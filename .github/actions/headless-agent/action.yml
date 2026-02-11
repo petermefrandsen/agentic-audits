@@ -60,9 +60,10 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
       run: |
-        # Authenticate explicitly to populate ~/.config/gh/hosts.yml
-        # This is expected by the Copilot CLI in some environments.
-        echo "$GH_TOKEN" | gh auth login --with-token
+        set -euo pipefail
+        echo "::group::Authenticating GitHub CLI"
+        # GH_TOKEN is already set, so gh is authenticated.
+        # We just verify the status.
         gh auth status
         echo "::endgroup::"
 
