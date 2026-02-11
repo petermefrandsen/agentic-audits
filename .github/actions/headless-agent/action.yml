@@ -60,10 +60,9 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
       run: |
-        set -euo pipefail
-        echo "::group::Authenticating GitHub CLI"
-        # GH_TOKEN is already set, so gh is authenticated.
-        # We just verify the status.
+        # Authenticate explicitly to populate ~/.config/gh/hosts.yml
+        # This is expected by the Copilot CLI in some environments.
+        echo "$GH_TOKEN" | gh auth login --with-token
         gh auth status
         echo "::endgroup::"
 
@@ -222,6 +221,11 @@ runs:
         FALLBACK_MODEL: ${{ inputs.fallback_model }}
       run: |
         set -euo pipefail
+        
+        # Explicitly export tokens to ensure Copilot CLI sees them
+        export COPILOT_GITHUB_TOKEN="${GH_TOKEN}"
+        export GITHUB_TOKEN="${GH_TOKEN}"
+        
         echo "::group::Agent Mission"
         echo "Mission:        ${AGENT_MISSION}"
         echo "Context:        ${CONTEXT_FILES}"
