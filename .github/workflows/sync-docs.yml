@@ -51,6 +51,19 @@ jobs:
             Provide a summary of what was updated and why.
           context_files: ${{ inputs.internal_doc_path }}
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
-          model: "gpt-5-mini"
-          fallback_model: "gpt-4.1"
+          model: "gpt-4o-mini"
+          fallback_model: "gpt-4o"
           sources_config: ${{ inputs.sources_config }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "docs: synchronized internal documentation"
+          title: "docs: Internal Documentation Sync"
+          body: |
+            This PR was created automatically by the Doc Sync workflow.
+            
+            The agent has updated internal documentation based on the latest source files.
+          branch: "agent/doc-sync-${{ github.run_id }}"
+          delete-branch: true

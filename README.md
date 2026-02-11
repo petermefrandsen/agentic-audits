@@ -117,8 +117,8 @@ jobs:
             Be specific about what files to review and what to look for.
           context_files: "src/**/*.ts"
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
-          model: "gpt-5-mini"
-          fallback_model: "gpt-4.1"
+          model: "gpt-4o-mini"
+          fallback_model: "gpt-4o"
           sources_config: ".github/sources.yml"
 ```
 

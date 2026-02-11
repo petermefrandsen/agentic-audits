@@ -1,46 +1,53 @@
 #!/bin/bash
 set -euo pipefail
 
-# Mock inputs for local testing
+# Local Agent Test Script
+# Usage: export GH_TOKEN=your_token && ./local-test.sh
+
+# Default inputs
 export INPUT_MISSION="Review this file and point out any issues."
 export INPUT_CONTEXT_FILES="README.md"
 export INPUT_GITHUB_TOKEN="${GH_TOKEN:-}"
-export INPUT_MODEL="gpt-4o" # or gpt-5-mini if available
-# export GH_DEBUG=api # Optional: debug GH CLI
+export INPUT_MODEL="gpt-4o-mini" 
 
 if [ -z "$INPUT_GITHUB_TOKEN" ]; then
   echo "Error: GH_TOKEN is not set. Please export GH_TOKEN=<your-token>."
   exit 1
 fi
 
-# Simulate the Agent Mission step
-echo "Gathering context from: $INPUT_CONTEXT_FILES"
-CONTEXT_CONTENT=""
-FILES=$(find . -path "./$INPUT_CONTEXT_FILES" -type f -not -path '*/.*' | head -n 20)
-for f in $FILES; do
-  CONTEXT_CONTENT+=$'\n\n--- FILE: '$f' ---\n'
-  CONTEXT_CONTENT+=$(cat "$f")
-done
-
+echo "Gathering context..."
+CONTEXT_CONTENT=$(cat README.md)
 FULL_MISSION="Mission:
 $INPUT_MISSION
 
 Context:
 $CONTEXT_CONTENT"
 
-echo "Full Mission Prompt:"
-echo "$FULL_MISSION"
+echo "Configuring local auth..."
+# Fetch username to satisfy gh validation
+USERNAME=$(curl -s -H "Authorization: token ${INPUT_GITHUB_TOKEN}" https://api.github.com/user | grep '"login":' | awk -F'"' '{print $4}')
 
-# Export tokens explicitly
+if [ -z "$USERNAME" ]; then
+    echo "Warning: Could not fetch username. Using fallback."
+    USERNAME="headless-agent"
+fi
+
+mkdir -p ~/.config/gh
+cat > ~/.config/gh/hosts.yml <<EOF
+github.com:
+    user: "$USERNAME"
+    oauth_token: "${INPUT_GITHUB_TOKEN}"
+    git_protocol: "https"
+EOF
+chmod 600 ~/.config/gh/hosts.yml
+
+# Clear config conflict if any
+rm -rf ~/.config/github-copilot
+
+# Env vars
 export COPILOT_GITHUB_TOKEN="${INPUT_GITHUB_TOKEN}"
 export GITHUB_TOKEN="${INPUT_GITHUB_TOKEN}"
+export GH_TOKEN="${INPUT_GITHUB_TOKEN}"
 
-echo "Running gh copilot..."
-# We use 'gh copilot suggest' for old CLI or 'gh copilot' for new agent?
-# Checking what's installed...
-gh copilot --version || echo "gh copilot version check failed"
-
-# Run agent
-# Note: --allow-all-tools might require interactive approval if not in CI?
-# In new CLI, -p is definitely the way.
+echo "Starting Agent..."
 gh copilot --allow-all-tools -p "$FULL_MISSION"
