@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# EXAMPLE SPOKE: Weekly Prompt Audit
+# ─────────────────────────────────────────────────────────────────────────────
+# This is an EXAMPLE workflow demonstrating how to use the headless-agent hub
+# action. Copy and adapt it for your own repository and use case.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: "Weekly Prompt Audit"
+
+on:
+  schedule:
+    # Every Monday at 07:00 UTC
+    - cron: "0 7 * * 1"
+  workflow_dispatch: # Allow manual trigger for testing
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prompt-audit:
+    name: "Audit Prompt Files"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run prompt audit agent
+        uses: ./.github/actions/headless-agent
+        with:
+          mission: |
+            Review all markdown files in /prompts.
+            Check each file for clarity, safety, and conciseness.
+            Flag any prompts that contain ambiguous instructions, unsafe patterns,
+            or unnecessary verbosity.
+            If improvements are found, rewrite the file in-place with the improved version.
+            Provide a summary of all changes made.
+          context_files: "prompts/**/*.md"
+          github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
+          model: "gpt-4o"
+          fallback_model: "gpt-4o-mini"
