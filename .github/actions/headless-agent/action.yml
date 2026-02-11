@@ -62,9 +62,8 @@ runs:
       run: |
         set -euo pipefail
         echo "::group::Authenticating GitHub CLI"
-        # Authenticate explicitly to ensure ~/.config/gh/hosts.yml is populated
-        # which Copilot CLI often relies on.
-        echo "$GH_TOKEN" | gh auth login --with-token
+        # GH_TOKEN is already set, so gh is authenticated.
+        # We just verify the status.
         gh auth status
         echo "::endgroup::"
 
