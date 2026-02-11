@@ -95,7 +95,7 @@ jobs:
 | `mission` | ✅ | — | The agent mission prompt to execute |
 | `context_files` | | `.` | File paths or globs for the agent to consider |
 | `github_token` | ✅ | — | GitHub token with Copilot access |
-| `model` | | *(auto)* | Primary Copilot model (e.g. `gpt-4o`, `claude-sonnet-4`) |
+| `model` | | *(auto)* | Primary Copilot model (e.g. `gpt-5-mini`, `claude-sonnet-4`) |
 | `fallback_model` | | *(none)* | Fallback model if primary hits quota |
 | `sources_config` | | `.github/sources.yml` | Path to YAML config for extra documentation sources |
 
@@ -212,8 +212,8 @@ jobs:
             Be specific about what files to review and what to look for.
           context_files: "src/**/*.ts"
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
-          model: "gpt-4o"
-          fallback_model: "gpt-4o-mini"
+          model: "gpt-5-mini"
+          fallback_model: "gpt-4.1"
           sources_config: ".github/sources.yml"
 ```
 
