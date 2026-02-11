@@ -26,7 +26,7 @@ inputs:
   sources_config:
     description: "Path to a YAML file defining documentation sources (MCP servers, web URLs). If the file doesn't exist, no sources are configured."
     required: false
-    default: ""
+    default: ".github/sources.yml"
 
 runs:
   using: "composite"
