@@ -47,6 +47,7 @@ jobs:
             \_string\.go$
 
       - name: Update coverage badge
+        if: github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ secrets.COVERAGE_GIST_SECRET }}
           GIST_ID: ${{ secrets.COVERAGE_GIST_ID }}
