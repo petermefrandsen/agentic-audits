@@ -37,10 +37,5 @@ jobs:
           fallback_model: "gpt-4.1"
           
           # Built-in PR Creation
-          pr_title: "chore: Weekly Prompt Audit"
-          pr_body: |
-            This PR was created automatically by the Weekly Prompt Audit workflow.
-            
-            The agent has reviewed prompt files and made improvements for clarity, safety, or conciseness.
-          pr_branch: "agent/prompt-audit-${{ github.run_id }}"
+          # Built-in PR Creation
           pr_labels: "automated-pr"

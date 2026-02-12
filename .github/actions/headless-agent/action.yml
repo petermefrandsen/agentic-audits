@@ -37,13 +37,13 @@ inputs:
     required: false
     default: "false"
   pr_title:
-    description: "Title for the Pull Request."
+    description: "Title for the Pull Request. If not provided, the agent will generate one."
     required: false
-    default: "chore: Automated User Changes"
+    default: ""
   pr_body:
-    description: "Body content for the Pull Request."
+    description: "Body content for the Pull Request. If not provided, the agent will generate one."
     required: false
-    default: "This PR was created automatically by the agent."
+    default: ""
   pr_branch:
     description: "Branch name for the Pull Request. If not provided, you should generate a relevant one."
     required: false
@@ -328,11 +328,29 @@ runs:
           FULL_MISSION="${FULL_MISSION}
 
           IMPORTANT: After completing the changes, you MUST create a Pull Request using the GitHub MCP tools.
-          - Title: ${{ inputs.pr_title }}
-          - Body: ${{ inputs.pr_body }}
+          "
+          
+          if [[ -n "${{ inputs.pr_title }}" ]]; then
+             FULL_MISSION="${FULL_MISSION}
+             - Title: ${{ inputs.pr_title }}"
+          else
+             FULL_MISSION="${FULL_MISSION}
+             - Title: Generate a concise, conventional commit style title describing your changes."
+          fi
+
+          if [[ -n "${{ inputs.pr_body }}" ]]; then
+             FULL_MISSION="${FULL_MISSION}
+             - Body: ${{ inputs.pr_body }}"
+          else
+             FULL_MISSION="${FULL_MISSION}
+             - Body: Generate a detailed description of the changes made."
+          fi
+
+          FULL_MISSION="${FULL_MISSION}
           - Base: ${{ inputs.pr_base }}
           - Labels: ${{ inputs.pr_labels }}
           "
+          
           if [[ -n "${{ inputs.pr_branch }}" ]]; then
             FULL_MISSION="${FULL_MISSION}
             - Branch: ${{ inputs.pr_branch }}
