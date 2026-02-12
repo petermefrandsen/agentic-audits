@@ -52,10 +52,26 @@ setup() {
 
 @test "resolve_mission.sh: resolves mission input" {
     export INPUT_MISSION="Analyze code"
+    # Create a temp file for GITHUB_ENV to ensure it works in any environment
+    export GITHUB_ENV_FILE="$(mktemp)"
+    # Temporarily set GITHUB_ENV to our temp file
+    OLD_GITHUB_ENV="${GITHUB_ENV:-}"
+    export GITHUB_ENV="$GITHUB_ENV_FILE"
+
     run bash "$SRC_DIR/resolve_mission.sh"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Resolved Mission Content:"* ]]
-    [[ "$output" == *"Analyze code"* ]]
+    
+    # Check if the variable was written to GITHUB_ENV
+    grep -q "RESOLVED_MISSION<<EOF" "$GITHUB_ENV_FILE"
+    grep -q "Analyze code" "$GITHUB_ENV_FILE"
+
+    # Cleanup
+    rm "$GITHUB_ENV_FILE"
+    if [ -n "$OLD_GITHUB_ENV" ]; then
+        export GITHUB_ENV="$OLD_GITHUB_ENV"
+    else
+        unset GITHUB_ENV
+    fi
     unset INPUT_MISSION
 }
 
