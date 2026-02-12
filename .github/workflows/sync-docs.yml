@@ -1,0 +1,59 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# EXAMPLE SPOKE: On-Demand Doc Sync
+# ─────────────────────────────────────────────────────────────────────────────
+# This is an EXAMPLE workflow demonstrating how to use the headless-agent hub
+# action with configurable documentation sources. Copy and adapt it for your
+# own repository and use case.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: "On-Demand Doc Sync"
+
+on:
+  workflow_dispatch:
+    inputs:
+      library_name:
+        description: "Name of the library to fetch latest docs for (e.g. 'langchain', 'react')."
+        required: true
+        type: string
+      internal_doc_path:
+        description: "Path to the internal doc to update."
+        required: false
+        default: "docs/internal-guide.md"
+        type: string
+      sources_config:
+        description: "Path to the sources YAML config file."
+        required: false
+        default: ".github/sources.yml"
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-docs:
+    name: "Sync External Documentation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Run doc sync agent
+        uses: ./
+        with:
+          mission: |
+            Use the context7 tool to fetch the latest documentation for "${{ inputs.library_name }}".
+            Review "${{ inputs.internal_doc_path }}" and update it to match
+            the latest external documentation.
+            Preserve any internal-specific notes or comments already in the file.
+            Provide a summary of what was updated and why.
+          context_files: ${{ inputs.internal_doc_path }}
+          github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
+          model: "gpt-5-mini"
+          fallback_model: "gpt-4.1"
+          sources_config: ${{ inputs.sources_config }}
+
+          # Built-in PR Creation via MCP
+          pr_labels: "automated-pr"

@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# sources.yml — External documentation sources for agent missions
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The hub action reads this file to configure additional knowledge sources
+# beyond the default Context7 MCP server.
+#
+# Source types:
+#   mcp  — Model Context Protocol server (installed via npm, added to MCP config)
+#   web  — Web URL (passed as additional context in the mission prompt)
+#
+# Set `enabled: false` to disable a source without removing it.
+# ─────────────────────────────────────────────────────────────────────────────
+
+sources:
+  # ── MCP Servers ──────────────────────────────────────────────────────────
+  - name: context7
+    type: mcp
+    package: "@upstash/context7-mcp"
+    enabled: true
+
+  - name: github
+    type: mcp
+    package: "@modelcontextprotocol/server-github"
+    enabled: true
+
+  # ── Web Documentation Sources ────────────────────────────────────────────
+  # Add URLs the agent should consult when running missions.
+  # These are injected into the mission prompt automatically.
+
+  - name: langchain-docs
+    type: web
+    url: "https://python.langchain.com/docs/"
+    enabled: false
+
+  - name: openai-api-ref
+    type: web
+    url: "https://platform.openai.com/docs/api-reference"
+    enabled: false
+
+  - name: github-actions-docs
+    type: web
+    url: "https://docs.github.com/en/actions"
+    enabled: false

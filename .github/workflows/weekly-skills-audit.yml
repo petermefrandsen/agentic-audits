@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# EXAMPLE SPOKE: Weekly Prompt Audit
+# ─────────────────────────────────────────────────────────────────────────────
+# This is an EXAMPLE workflow demonstrating how to use the headless-agent hub
+# action. Copy and adapt it for your own repository and use case.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: "Weekly Skills Audit"
+
+on:
+  schedule:
+    # Every Monday at 07:00 UTC
+    - cron: "0 7 * * 1"
+  workflow_dispatch: # Allow manual trigger for testing
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prompt-audit:
+    name: "Audit Skills Files"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Run skills audit agent
+        uses: ./
+        with:
+          template: "skills-audit"
+          context_files: "**/skills/*.md"
+          github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
+          model: "gpt-5-mini"
+          fallback_model: "gpt-4.1"
+          
+          # Built-in PR Creation
+          pr_labels: "automated-pr"
