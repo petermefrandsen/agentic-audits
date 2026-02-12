@@ -327,39 +327,21 @@ runs:
         if [[ "${{ inputs.dry_run }}" == "false" ]]; then
           FULL_MISSION="${FULL_MISSION}
 
-          IMPORTANT: After completing the changes, you MUST CRITICALY create a Pull Request using the 'create_pull_request' tool from the GitHub MCP server. DO NOT just provide a link; you must execute the tool call.
-          "
           
-          if [[ -n "${{ inputs.pr_title }}" ]]; then
-             FULL_MISSION="${FULL_MISSION}
-             - Title: ${{ inputs.pr_title }}"
-          else
-             FULL_MISSION="${FULL_MISSION}
-             - Title: Generate a concise, conventional commit style title describing your changes., e.g. refactor(skills): [ai-generated] <summary of changes>"
-          fi
-
-          if [[ -n "${{ inputs.pr_body }}" ]]; then
-             FULL_MISSION="${FULL_MISSION}
-             - Body: ${{ inputs.pr_body }}"
-          else
-             FULL_MISSION="${FULL_MISSION}
-             - Body: Generate a detailed description of the changes made., e.g. 
-             - List the skills modified.
-             - Summarize key changes (e.g., 'Removed verbosity', 'Fixed ambiguous outcome', 'Added safety check').
-             - Highlight any <!-- ISSUE --> comments added."
-          fi
-
-          FULL_MISSION="${FULL_MISSION}
-          - Repository: ${{ github.repository }}
-          - Base: ${{ inputs.pr_base }}
-          - Labels: ${{ inputs.pr_labels }}
-          "
+          ### MANDATORY: Pull Request Creation
+          You MUST create a Pull Request for your changes using the `create_pull_request` tool from the GitHub MCP server. 
           
-          if [[ -n "${{ inputs.pr_branch }}" ]]; then
-            FULL_MISSION="${FULL_MISSION}
-            - Branch: ${{ inputs.pr_branch }}
-            "
-          fi
+          PR Specifications:
+          - **Repository**: ${{ github.repository }}
+          - **Base Branch**: ${{ inputs.pr_base }}
+          - **Branch Name**: ${{ inputs.pr_branch != '' && inputs.pr_branch || 'Generate a unique branch name like agent/audit-<timestamp>' }}
+          
+          - **Title**: ${{ inputs.pr_title != '' && inputs.pr_title || 'Use STRICT Conventional Commits format (e.g., refactor(skills): [AI-GENERATED] audit and clarify instructions).' }}
+          
+          - **Body**: ${{ inputs.pr_body != '' && inputs.pr_body || 'You MUST provide a comprehensive, elaborate description including: 1) Overview: A summary of findings. 2) Detailed Changes: A bulleted list of modified files and specific improvements. 3) Issues Found: Explicitly list any <!-- ISSUE --> comments added.' }}
+          
+          - **Labels**: ${{ inputs.pr_labels }}
+          "
         else
           FULL_MISSION="${FULL_MISSION}
           
