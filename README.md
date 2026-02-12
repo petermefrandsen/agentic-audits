@@ -131,7 +131,6 @@ jobs:
 
 ## Copilot Skills
 
-Reusable skills located in `.github/skills/` provide structured instructions for common tasks.
-Reference them in your mission prompt: "Use the `prepare-pr` skill to create a PR."
+<!-- ISSUE: `.github/skills/` referenced but directory not present; cannot audit skill files. -->
 
-Check the `SKILL.md` files for usage details.
+Reusable skills are expected in `.github/skills/` to provide structured, safe instructions for agents. Add per-skill SKILL.md files with concise, imperative steps; avoid destructive commands and hardcoded secrets.
