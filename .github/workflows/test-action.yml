@@ -1,0 +1,26 @@
+name: "Test Action (Dry Run)"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  dry-run-test:
+    name: "Dry Run Test"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run headless-agent (Dry Run)
+        uses: ./
+        with:
+          mission: "Analyze the repository README.md and suggest 3 improvements. Do not implement anything."
+          dry_run: "true"
+          github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
+          model: "gpt-4o"
