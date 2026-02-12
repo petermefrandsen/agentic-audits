@@ -1,0 +1,91 @@
+name: Recommend Version Bump
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  identify-bump:
+    name: Identify SemVer Bump
+    runs-on: ubuntu-24.04
+    outputs:
+      level: ${{ steps.get-level.outputs.level }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+
+      - name: Run Agentic Audit
+        uses: ./
+        with:
+          template: "version-bump"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: "true"
+
+      - name: Get Bump Level
+        id: get-level
+        shell: bash
+        run: |
+          if [ -f bump_level.txt ]; then
+            LEVEL=$(cat bump_level.txt | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+            echo "level=$LEVEL" >> $GITHUB_OUTPUT
+            echo "Identified level: $LEVEL"
+          else
+            echo "::error::bump_level.txt not found"
+            exit 1
+          fi
+
+  manual-approval:
+    name: Major Bump Approval
+    needs: identify-bump
+    if: needs.identify-bump.outputs.level == 'major'
+    runs-on: ubuntu-24.04
+    environment: version-bump-approval
+    steps:
+      - name: Approved
+        run: echo "Major bump approved by owner."
+
+  apply-label:
+    name: Apply Version Label
+    needs: [identify-bump, manual-approval]
+    if: |
+      always() && 
+      needs.identify-bump.result == 'success' && 
+      (needs.identify-bump.outputs.level != 'major' || needs.manual-approval.result == 'success')
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Ensure Labels Exist
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LEVELS=("patch" "minor" "major")
+          for lvl in "${LEVELS[@]}"; do
+            gh label create "bump:$lvl" --color "FBCA04" --description "Recommended $lvl version bump" --force || true
+          done
+
+      - name: Apply Label
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LEVEL: ${{ needs.identify-bump.outputs.level }}
+        run: |
+          # Remove existing bump labels first
+          EXISTING_LABELS=$(gh pr view $PR_NUMBER --json labels --jq '.labels[].name' | grep '^bump:' || true)
+          for label in $EXISTING_LABELS; do
+            gh pr edit $PR_NUMBER --remove-label "$label" || true
+          done
+          
+          # Add the new one
+          gh pr edit $PR_NUMBER --add-label "bump:$LEVEL"
