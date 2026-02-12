@@ -1,16 +1,29 @@
-.PHONY: build test coverage clean dist
+.PHONY: build test coverage coverage-report clean dist
 
+# Ensure /usr/local/go/bin is in PATH (common location)
+export PATH := $(PATH):/usr/local/go/bin
+
+# Try to find go binary, fallback to 'go'
+GO := $(shell which go 2>/dev/null || echo go)
 BINARY_NAME=agentic-audits
 
+
+
 build:
-	go build -o $(BINARY_NAME) src/*.go
+	$(GO) build -o $(BINARY_NAME) src/*.go
 
 test:
-	go test -v -coverprofile=coverage.out ./src/...
-	go tool cover -func=coverage.out
+	$(GO) test -v -coverprofile=coverage.out ./src/...
+	$(GO) tool cover -func=coverage.out
+
 
 coverage: test
-	go tool cover -html=coverage.out
+	$(GO) tool cover -html=coverage.out
+
+coverage-report: test
+	@chmod +x src/generate_coverage_report.sh
+	@./src/generate_coverage_report.sh
+
 
 clean:
 	rm -f $(BINARY_NAME) coverage.out

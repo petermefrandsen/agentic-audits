@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
 )
+
 
 func TestConstructFullPrompt(t *testing.T) {
 	os.Setenv("GITHUB_REPOSITORY", "test/repo")
@@ -40,7 +44,75 @@ func TestConstructFullPrompt(t *testing.T) {
 	}
 }
 
+func TestExecuteMission(t *testing.T) {
+	t.Run("Primary success", func(t *testing.T) {
+		executor := &MockCommandExecutor{
+			RunFunc: func(name string, args []string, env []string, stdout, stderr io.Writer) error {
+				return nil
+			},
+		}
+		opts := AgentOptions{Executor: executor}
+		err := executeMission(opts, "")
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Primary fails, fallback succeeds", func(t *testing.T) {
+		callCount := 0
+		executor := &MockCommandExecutor{
+			RunFunc: func(name string, args []string, env []string, stdout, stderr io.Writer) error {
+				callCount++
+				if callCount == 1 {
+					return fmt.Errorf("primary failed")
+				}
+				return nil
+			},
+		}
+		opts := AgentOptions{
+			Executor:      executor,
+			FallbackModel: "fallback",
+		}
+		err := executeMission(opts, "")
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if callCount != 2 {
+			t.Errorf("expected 2 calls, got %d", callCount)
+		}
+	})
+
+	t.Run("Both fail", func(t *testing.T) {
+		executor := &MockCommandExecutor{
+			RunFunc: func(name string, args []string, env []string, stdout, stderr io.Writer) error {
+				return fmt.Errorf("fail")
+			},
+		}
+		opts := AgentOptions{
+			Executor:      executor,
+			FallbackModel: "fallback",
+		}
+		err := executeMission(opts, "")
+		if err == nil {
+			t.Error("expected error when both fail")
+		}
+	})
+}
+
+func TestRealCommandExecutor_RunCommand(t *testing.T) {
+	executor := &RealCommandExecutor{}
+	var stdout, stderr bytes.Buffer
+	err := executor.RunCommand("echo", []string{"hello"}, os.Environ(), &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "hello") {
+		t.Errorf("expected stdout to contain hello, got %q", stdout.String())
+	}
+}
+
 func TestGetEnvOrDefault(t *testing.T) {
+
 	os.Setenv("TEST_VAR", "value")
 	defer os.Unsetenv("TEST_VAR")
 

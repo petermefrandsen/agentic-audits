@@ -8,11 +8,17 @@ import (
 	"path/filepath"
 )
 
+
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+
 type GitHubUser struct {
 	Login string `json:"login"`
 }
 
-func configureGitHubAuth(token string) error {
+func configureGitHubAuth(client HTTPClient, token string) error {
 	if token == "" {
 		return fmt.Errorf("GH_TOKEN is not set")
 	}
@@ -23,7 +29,6 @@ func configureGitHubAuth(token string) error {
 	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
 	if err == nil {
 		req.Header.Set("Authorization", "token "+token)
-		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			var user GitHubUser
@@ -34,6 +39,7 @@ func configureGitHubAuth(token string) error {
 			resp.Body.Close()
 		}
 	}
+
 
 	configDir := filepath.Join(os.Getenv("HOME"), ".config", "gh")
 	if err := os.MkdirAll(configDir, 0755); err != nil {

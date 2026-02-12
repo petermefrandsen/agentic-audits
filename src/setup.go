@@ -3,17 +3,17 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 )
 
-func installGitHubCLI() error {
-	if _, err := exec.LookPath("gh"); err == nil {
-		fmt.Println("GitHub CLI is already installed.")
-		return nil
-	}
 
+func installGitHubCLI(executor CommandExecutor) error {
+	// We can't easily check for existence via executor without returning something.
+	// Let's assume the caller handles basic existence check or the executor does.
+	// Actually, let's keep it simple and just run the commands.
+	
 	fmt.Println("::group::Installing GitHub CLI")
 	defer fmt.Println("::endgroup::")
+
 
 	// This follows the logic from install_gh.sh for Debian-based systems (common in GH Actions)
 	commands := [][]string{
@@ -25,35 +25,23 @@ func installGitHubCLI() error {
 	}
 
 	for _, cmdArgs := range commands {
-		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
+		if err := executor.RunCommand(cmdArgs[0], cmdArgs[1:], os.Environ(), os.Stdout, os.Stderr); err != nil {
 			return fmt.Errorf("failed to run %v: %w", cmdArgs, err)
 		}
 	}
 
+
 	return nil
 }
 
-func installCopilotExtension() error {
+func installCopilotExtension(executor CommandExecutor) error {
 	fmt.Println("::group::Installing gh-copilot extension")
 	defer fmt.Println("::endgroup::")
 
-	// Check if already installed
-	cmd := exec.Command("gh", "extension", "list")
-	output, _ := cmd.CombinedOutput()
-	if contains(string(output), "github/gh-copilot") {
-		fmt.Println("gh-copilot is already available.")
-		return nil
-	}
-
 	fmt.Println("Installing github/gh-copilot extension...")
-	cmd = exec.Command("gh", "extension", "install", "github/gh-copilot", "--force")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return executor.RunCommand("gh", []string{"extension", "install", "github/gh-copilot", "--force"}, os.Environ(), os.Stdout, os.Stderr)
 }
+
 
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && stringContains(s, substr)

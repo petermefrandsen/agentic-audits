@@ -4,38 +4,50 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
+
 func main() {
-	mission := flag.String("mission", "", "Agent mission prompt")
-	template := flag.String("template", "", "Mission template name")
-	sourcesConfig := flag.String("sources-config", ".github/sources.yml", "Path to sources config")
-	githubToken := flag.String("github-token", "", "GitHub Token")
-	contextFiles := flag.String("context-files", ".", "Context files or globs")
-	model := flag.String("model", "", "Primary model")
-	fallbackModel := flag.String("fallback-model", "", "Fallback model")
-	dryRun := flag.Bool("dry-run", false, "Skip PR creation")
-	skipSetup := flag.Bool("skip-setup", false, "Skip GH CLI and extension installation")
+	if err := run(os.Args[1:], &RealCommandExecutor{}, http.DefaultClient); err != nil {
+		fmt.Printf("::error::%v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(args []string, executor CommandExecutor, httpClient HTTPClient) error {
+	fs := flag.NewFlagSet("agent", flag.ContinueOnError)
+	mission := fs.String("mission", "", "Agent mission prompt")
+	template := fs.String("template", "", "Mission template name")
+	sourcesConfig := fs.String("sources-config", ".github/sources.yml", "Path to sources config")
+	githubToken := fs.String("github-token", "", "GitHub Token")
+	contextFiles := fs.String("context-files", ".", "Context files or globs")
+	model := fs.String("model", "", "Primary model")
+	fallbackModel := fs.String("fallback-model", "", "Fallback model")
+	dryRun := fs.Bool("dry-run", false, "Skip PR creation")
+	skipSetup := fs.Bool("skip-setup", false, "Skip GH CLI and extension installation")
 	
-	flag.Parse()
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
 	// 0. Setup (CLI, Auth, Extension)
 	if !*skipSetup {
-		if err := installGitHubCLI(); err != nil {
+		if err := installGitHubCLI(executor); err != nil {
 			fmt.Printf("::warning::Setup failed (GH CLI): %v\n", err)
 		}
-		if err := configureGitHubAuth(*githubToken); err != nil {
-			fmt.Printf("::error::Auth failed: %v\n", err)
-			os.Exit(1)
+		if err := configureGitHubAuth(httpClient, *githubToken); err != nil {
+			return fmt.Errorf("auth failed: %w", err)
 		}
-		if err := installCopilotExtension(); err != nil {
+		if err := installCopilotExtension(executor); err != nil {
 			fmt.Printf("::warning::Setup failed (Copilot extension): %v\n", err)
 		}
 	}
+
 
 	// 1. Resolve Mission
 	resolvedMission, err := resolveMission(*mission, *template)
@@ -86,17 +98,19 @@ func main() {
 		FallbackModel: *fallbackModel,
 		DryRun:        *dryRun,
 		GithubToken:   *githubToken,
+		Executor:      executor,
 	}
 
 	if err := executeMission(agentOpts, processed.WebSources); err != nil {
-		fmt.Printf("::error::Mission execution failed: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("mission execution failed: %w", err)
 	}
 
 	// Print summary (mimics ::group:: behavior)
 	fmt.Println("Copilot config written to", configFile)
 	fmt.Println(string(configData))
+	return nil
 }
+
 
 func outputEnv(name, value string) {
 	if value == "" {

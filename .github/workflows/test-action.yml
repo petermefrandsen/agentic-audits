@@ -24,15 +24,16 @@ jobs:
           fetch-depth: 10
 
       - name: Run Unit Tests
-        run: |
-          go test -v -coverprofile=coverage.out ./src/...
+        run: make test
+
 
       - name: Go Coverage report
         uses: gwatts/go-coverage-action@v2
         id: coverage
         with:
-          coverage-threshold: 20
+          coverage-threshold: 80
           cover-pkg: ./src/...
+
           ignore-pattern: |
             \.pb\.go$
             \_string\.go$
@@ -59,3 +60,9 @@ jobs:
           dry_run: "true"
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
           model: "gpt-5-mini"
+
+      - name: Detailed Coverage Report
+        if: github.event_name == 'pull_request'
+        run: make coverage-report
+
+

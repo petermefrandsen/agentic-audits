@@ -2,10 +2,26 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"time"
 )
+
+type CommandExecutor interface {
+	RunCommand(name string, args []string, env []string, stdout, stderr io.Writer) error
+}
+
+type RealCommandExecutor struct{}
+
+func (e *RealCommandExecutor) RunCommand(name string, args []string, env []string, stdout, stderr io.Writer) error {
+	cmd := exec.Command(name, args...)
+	cmd.Env = env
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	return cmd.Run()
+}
+
 
 type AgentOptions struct {
 	FullMission   string
@@ -14,7 +30,9 @@ type AgentOptions struct {
 	FallbackModel string
 	DryRun        bool
 	GithubToken   string
+	Executor      CommandExecutor
 }
+
 
 func constructFullPrompt(mission string, options AgentOptions, webSources string) string {
 	fullMission := fmt.Sprintf("%s (context files: %s)", mission, options.ContextFiles)
@@ -61,29 +79,27 @@ NOTE: dry_run is set to TRUE. Do NOT create a Pull Request. Just verify the chan
 	return fullMission
 }
 
-func runAgent(prompt string, model string, token string) error {
+func runAgent(executor CommandExecutor, prompt string, model string, token string) error {
 	args := []string{"copilot", "--allow-all-tools", "-p", prompt}
 	if model != "" {
 		args = append(args, "--model", model)
 	}
 
-	cmd := exec.Command("gh", args...)
-	cmd.Env = append(os.Environ(), 
+	env := append(os.Environ(),
 		"COPILOT_GITHUB_TOKEN="+token,
 		"GITHUB_TOKEN="+token,
 	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	fmt.Printf("Running agent with model: %s\n", model)
-	return cmd.Run()
+	return executor.RunCommand("gh", args, env, os.Stdout, os.Stderr)
 }
+
 
 func executeMission(options AgentOptions, webSources string) error {
 	fullPrompt := constructFullPrompt(options.FullMission, options, webSources)
 
 	// Attempt with primary model
-	err := runAgent(fullPrompt, options.Model, options.GithubToken)
+	err := runAgent(options.Executor, fullPrompt, options.Model, options.GithubToken)
 	if err == nil {
 		fmt.Println("Agent mission completed successfully.")
 		return nil
@@ -93,7 +109,7 @@ func executeMission(options AgentOptions, webSources string) error {
 
 	if options.FallbackModel != "" {
 		fmt.Printf("Retrying with fallback model: %s\n", options.FallbackModel)
-		err = runAgent(fullPrompt, options.FallbackModel, options.GithubToken)
+		err = runAgent(options.Executor, fullPrompt, options.FallbackModel, options.GithubToken)
 		if err == nil {
 			fmt.Println("Agent mission completed with fallback model.")
 			return nil
@@ -103,6 +119,7 @@ func executeMission(options AgentOptions, webSources string) error {
 
 	return fmt.Errorf("agent mission failed and no fallback model is configured: %w", err)
 }
+
 
 func getEnvOrDefault(name, defaultValue string) string {
 	if val := os.Getenv(name); val != "" {
