@@ -343,7 +343,7 @@ runs:
               Provide a high-level technical summary of what was audited and the general state of the skills.
               
               ### 🛠 Detailed Changes
-              Provide a per-skill breakdown of specific technical improvements (e.g., "Skill X: Removed 40% verbosity, updated paths to match current source tree").
+              Provide a per-skill breakdown of specific technical improvements (e.g., Skill X: Removed 40% verbosity, updated paths to match current source tree).
               
               ### ⚠️ Manual Review Required
               List any specific files where you added <!-- ISSUE --> comments because they require human intervention.' }}
