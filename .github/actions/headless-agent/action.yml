@@ -327,7 +327,7 @@ runs:
         if [[ "${{ inputs.dry_run }}" == "false" ]]; then
           FULL_MISSION="${FULL_MISSION}
 
-          IMPORTANT: After completing the changes, you MUST create a Pull Request using the GitHub MCP tools.
+          IMPORTANT: After completing the changes, you MUST CRITICALY create a Pull Request using the 'create_pull_request' tool from the GitHub MCP server. DO NOT just provide a link; you must execute the tool call.
           "
           
           if [[ -n "${{ inputs.pr_title }}" ]]; then
@@ -350,6 +350,7 @@ runs:
           fi
 
           FULL_MISSION="${FULL_MISSION}
+          - Repository: ${{ github.repository }}
           - Base: ${{ inputs.pr_base }}
           - Labels: ${{ inputs.pr_labels }}
           "

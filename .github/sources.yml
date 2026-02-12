@@ -19,6 +19,11 @@ sources:
     package: "@upstash/context7-mcp"
     enabled: true
 
+  - name: github
+    type: mcp
+    package: "@modelcontextprotocol/server-github"
+    enabled: true
+
   # ── Web Documentation Sources ────────────────────────────────────────────
   # Add URLs the agent should consult when running missions.
   # These are injected into the mission prompt automatically.
