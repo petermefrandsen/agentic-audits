@@ -26,7 +26,9 @@ jobs:
         uses: ./
         with:
           template: "version-bump"
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
+          model: "gpt-5-mini"
+          fallback_model: "gpt-4.1"
           dry_run: "true"
 
       - name: Get Bump Level
