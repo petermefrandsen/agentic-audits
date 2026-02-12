@@ -12,5 +12,5 @@ jobs:
           template: "prompt-audit"
           context_files: "prompts/**/*.md" # Ensure context files are provided or default is used
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
-          model: "gpt-4o-mini"
+          model: "gpt-5-mini"
           dry_run: "true"
