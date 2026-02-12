@@ -345,7 +345,7 @@ runs:
              FULL_MISSION="${FULL_MISSION}
              - Body: Generate a detailed description of the changes made., e.g. 
              - List the skills modified.
-             - Summarize key changes (e.g., "Removed verbosity", "Fixed ambiguous outcome", "Added safety check").
+             - Summarize key changes (e.g., 'Removed verbosity', 'Fixed ambiguous outcome', 'Added safety check').
              - Highlight any <!-- ISSUE --> comments added."
           fi
 
