@@ -1,6 +1,7 @@
 # Agentic Audits
 
 [![CI](https://github.com/petermefrandsen/agentic-audits/actions/workflows/test-action.yml/badge.svg)](https://github.com/petermefrandsen/agentic-audits/actions/workflows/test-action.yml)
+[![Go Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/petermefrandsen/${{ secrets.COVERAGE_GIST_ID }}/raw/coverage.json)](https://github.com/petermefrandsen/agentic-audits/actions/workflows/test-action.yml)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Agentic%20Audits-blue.svg)](https://github.com/marketplace/actions/agentic-audits)
 
 Automated governance for AI assets using headless GitHub Copilot agents.

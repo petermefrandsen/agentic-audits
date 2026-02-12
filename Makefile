@@ -1,9 +1,22 @@
-.PHONY: test test-js test-bash
+.PHONY: build test coverage clean dist
 
-test: test-js test-bash
+BINARY_NAME=agentic-audits
 
-test-js:
-	npx vitest run
+build:
+	go build -o $(BINARY_NAME) src/*.go
 
-test-bash:
-	npx bats src/__tests__/*.bats
+test:
+	go test -v -coverprofile=coverage.out ./src/...
+	go tool cover -func=coverage.out
+
+coverage: test
+	go tool cover -html=coverage.out
+
+clean:
+	rm -f $(BINARY_NAME) coverage.out
+
+dist: build
+	mkdir -p dist
+	cp $(BINARY_NAME) dist/
+	# Note: In a real scenario, you'd build for multiple platforms
+	# GOOS=linux GOARCH=amd64 go build -o dist/$(BINARY_NAME)-linux-amd64

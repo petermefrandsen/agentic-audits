@@ -60,53 +60,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # ── 1. Install Node.js ──────────────────────────────────────────────
-    - name: Set up Node.js
-      uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
-      with:
-        node-version: "24"
-
-    # ── 2. Install gh CLI ───────────────────────────────────────────────
-    - name: Install GitHub CLI
-      shell: bash
-      run: ${{ github.action_path }}/src/install_gh.sh
-
-    # ── 3. Authenticate gh CLI ──────────────────────────────────────────
-    - name: Configure GitHub CLI Auth
+    # ── 1. Unified Agent Lifecycle (Go) ────────────────────────────────
+    - name: Run Agent Mission
       shell: bash
       env:
-        GH_TOKEN: ${{ inputs.github_token }}
-      run: ${{ github.action_path }}/src/configure_gh_auth.sh
-
-    # ── 4. Install gh-copilot extension ─────────────────────────────────
-    - name: Install gh-copilot extension
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-      run: ${{ github.action_path }}/src/install_gh_copilot.sh
-
-    # ── 5. Load sources config, install MCP servers & configure ─────────
-    - name: Load sources and configure Copilot MCP
-      shell: bash
-      env:
+        MISSION: ${{ inputs.mission }}
+        TEMPLATE: ${{ inputs.template }}
         SOURCES_CONFIG: ${{ inputs.sources_config }}
-      run: ${{ github.action_path }}/src/configure_sources.sh
-
-    # ── 6. Resolve Mission (Template or Input) ──────────────────────────
-    - name: Resolve Mission
-      shell: bash
-      env:
-        INPUT_MISSION: ${{ inputs.mission }}
-        INPUT_TEMPLATE: ${{ inputs.template }}
-      run: ${{ github.action_path }}/src/resolve_mission.sh
-
-    # ── 7. Run the agent mission (with model fallback) ──────────────────
-    - name: Execute agent mission
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
-        COPILOT_GITHUB_TOKEN: ${{ inputs.github_token }}
         CONTEXT_FILES: ${{ inputs.context_files }}
         MODEL: ${{ inputs.model }}
         FALLBACK_MODEL: ${{ inputs.fallback_model }}
@@ -116,4 +77,18 @@ runs:
         PR_TITLE: ${{ inputs.pr_title }}
         PR_BODY: ${{ inputs.pr_body }}
         PR_LABELS: ${{ inputs.pr_labels }}
-      run: ${{ github.action_path }}/src/execute_mission.sh
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        go run ${{ github.action_path }}/src/main.go \
+               ${{ github.action_path }}/src/sources.go \
+               ${{ github.action_path }}/src/agent.go \
+               ${{ github.action_path }}/src/setup.go \
+               ${{ github.action_path }}/src/auth.go \
+          --mission "$MISSION" \
+          --template "$TEMPLATE" \
+          --sources-config "$SOURCES_CONFIG" \
+          --github-token "$GITHUB_TOKEN" \
+          --context-files "$CONTEXT_FILES" \
+          --model "$MODEL" \
+          --fallback-model "$FALLBACK_MODEL" \
+          --dry-run "${DRY_RUN:-false}"

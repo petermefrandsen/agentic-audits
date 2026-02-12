@@ -15,7 +15,9 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -27,7 +29,29 @@ jobs:
         run: npm ci
 
       - name: Run Unit Tests
-        run: make test
+        run: |
+          go test -v -coverprofile=coverage.out ./src/...
+
+      - name: Go Coverage report
+        uses: gwatts/go-coverage-action@v2
+        id: coverage
+        with:
+          coverage-threshold: 80
+          cover-pkg: ./src/...
+          ignore-pattern: |
+            \.pb\.go$
+            \_string\.go$
+
+      - name: Update coverage badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        if: github.ref_name == 'main'
+        with:
+          auth: ${{ secrets.COVERAGE_GIST_SECRET }}
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          filename: coverage.json
+          label: Go Coverage
+          message: ${{ steps.coverage.outputs.coverage-pct-1dp }}%
+          color: ${{ steps.coverage.outputs.meets-threshold == 'true' && 'green' || 'red' }}
 
       - name: Run headless-agent (Dry Run)
         uses: ./
