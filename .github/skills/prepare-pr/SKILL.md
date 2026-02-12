@@ -1,10 +1,6 @@
 ---
 name: prepare-pr
-description: >
-  Prepares a clean pull request from agent-made changes. Creates a new branch,
-  stages and commits changes with a conventional-commit message, and opens a PR
-  with a structured description. Use this skill when you need to submit work
-  as a pull request rather than committing directly.
+description: "Create a clean pull request from agent-made changes."
 ---
 
 # Prepare Pull Request

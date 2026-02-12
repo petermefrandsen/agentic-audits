@@ -1,68 +1,46 @@
 ---
 name: docs-writer
-description: >
-  Generates or updates documentation files. Ensures consistent formatting,
-  table of contents, cross-references, and clear structure. Use this skill
-  when the mission involves writing, rewriting, or updating any documentation
-  or markdown files.
+description: "Create or update documentation with consistent structure and validated links."
 ---
 
 # Documentation Writer
 
-## When to use
+When to use
 
-Use this skill when your mission involves creating new documentation or
-updating existing docs — including READMEs, guides, API references, or
-any markdown files.
+When creating or updating READMEs, guides, API docs, or any markdown.
 
-## Instructions
+Create docs
 
-### Writing new documentation
+1. Identify audience: end user | developer | operator.
+2. Use this structure:
+```markdown
+# Title
 
-1. **Understand the audience** — determine if the doc targets end users,
-   developers, or operators.
+> One-line summary.
 
-2. **Use a consistent structure**:
-   ```markdown
-   # Title
+## Overview
 
-   > One-line description of what this document covers.
+## Prerequisites
 
-   ## Overview
-   Brief context and purpose.
+## Steps / Sections
 
-   ## Prerequisites
-   What the reader needs before starting.
+## Examples
 
-   ## Sections
-   Organized by topic, task, or concept.
+## Troubleshooting
 
-   ## Examples
-   Concrete, runnable examples where applicable.
+## References
+```
+3. Add TOC if document has more than three top-level sections.
+4. Use fenced code blocks with language tags.
 
-   ## Troubleshooting
-   Common issues and solutions.
+Update docs
 
-   ## References
-   Links to related documentation.
-   ```
+- Preserve tone and internal comments (`<!-- internal -->`).
+- Add a short changelog note describing edits.
+- Validate links and cross-references; if uncertain, add `<!-- TODO: verify -->`.
 
-3. **Add a table of contents** for documents longer than 3 sections.
+Rules
 
-4. **Use code blocks** with language hints for all code snippets.
-
-### Updating existing documentation
-
-1. **Preserve tone and style** — match the existing document's voice.
-2. **Mark what changed** — add a changelog entry or note if the doc has one.
-3. **Preserve internal notes** — do not remove comments marked with
-   `<!-- internal -->` or similar annotations.
-4. **Validate links** — ensure all cross-references and URLs are still valid.
-
-## Rules
-
-- Write in clear, concise English.
-- Use active voice.
-- One sentence per line in source markdown (for clean diffs).
-- Never remove content without explanation.
-- If unsure about factual accuracy, flag it with `<!-- TODO: verify -->`.
+- Use active voice and concise sentences.
+- One sentence per line in source markdown.
+- Do not remove content without an explicit note.

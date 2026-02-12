@@ -1,64 +1,49 @@
 ---
 name: code-reviewer
-description: >
-  Reviews code for best practices, security vulnerabilities, performance
-  issues, and maintainability. Produces structured review comments with
-  severity levels and actionable suggestions. Use this skill when the mission
-  involves auditing or reviewing code files.
+description: "Audit code for security, correctness, performance, and maintainability."
 ---
 
 # Code Reviewer
 
-## When to use
+When to use
 
-Use this skill when your mission involves reviewing, auditing, or analysing
-code for quality, security, or performance issues.
+When auditing code for correctness, security, performance, or maintainability.
 
-## Instructions
+Review process
 
-### Review process
+1. Read target files in context.
 
-1. **Scan the target files** — read each file in the context to understand
-   its purpose and structure.
+2. Check categories in priority order:
+- Critical: Security (secrets, injections, auth, insecure defaults)
+- Critical: Data safety (validation, error handling, logging leaks)
+- Important: Performance (N+1, blocking I/O, missing caching)
+- Important: Best practices (duplication, dead code, incorrect abstractions)
+- Minor: Style (naming, formatting)
 
-2. **Check each category** in order of priority:
+3. Report each finding using this template:
+```markdown
+### [SEVERITY] Short title
 
-   | Priority | Category | What to look for |
-   |----------|----------|-----------------|
-   | 🔴 Critical | **Security** | Hardcoded secrets, injection vulnerabilities, insecure defaults, missing auth checks |
-   | 🔴 Critical | **Data safety** | Unvalidated inputs, missing error handling, data leaks in logs |
-   | 🟡 Important | **Performance** | N+1 queries, unnecessary allocations, missing caching, blocking I/O |
-   | 🟡 Important | **Best practices** | SOLID violations, dead code, duplicated logic, missing types |
-   | 🔵 Minor | **Style** | Naming conventions, formatting, comment quality |
+**File:** path/to/file.ext (lines X–Y)
+**Category:** Security | Performance | BestPractices | Style
+**Description:** Concise explanation of the issue and impact.
+**Suggestion:**
+```diff
+- current code
++ suggested code
+```
+```
 
-3. **Produce structured findings** using this format for each issue:
+4. End summary:
+- Counts by severity
+- Top 3 actionable fixes
+- Overall assessment: pass | pass with warnings | needs attention
 
-   ```markdown
-   ### [SEVERITY] Short title
+If no issues, state "No issues found." Do not invent problems.
 
-   **File:** `path/to/file.ext` (line X-Y)
-   **Category:** Security | Performance | Best Practices | Style
-   **Description:** What the issue is and why it matters.
-   **Suggestion:**
-   ```diff
-   - current problematic code
-   + suggested fix
-   ```
-   ```
+Rules
 
-4. **Summarise** at the end with:
-   - Total issues by severity
-   - Top 3 most impactful improvements
-   - Overall assessment (pass / pass with warnings / needs attention)
-
-### If no issues are found
-
-Report a clean bill of health — do not invent issues.
-
-## Rules
-
-- Be constructive, not nitpicky.
-- Prioritise issues that affect correctness and security over style.
-- Include line numbers and file paths for every finding.
-- Suggest fixes, not just problems.
-- Never modify files directly during a review — only report findings.
+- Focus on correctness and security first.
+- Include file paths and line ranges.
+- Provide concrete, minimal fixes.
+- Do not modify files during review.
