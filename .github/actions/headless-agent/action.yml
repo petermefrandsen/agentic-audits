@@ -45,7 +45,7 @@ inputs:
     required: false
     default: "This PR was created automatically by the agent."
   pr_branch:
-    description: "Branch name for the Pull Request. Defaults to agent/mission-{run_id}."
+    description: "Branch name for the Pull Request. If not provided, you should generate a relevant one."
     required: false
     default: ""
   pr_base:
@@ -323,6 +323,28 @@ runs:
           FULL_MISSION="${FULL_MISSION}. ${EXTRA_WEB_SOURCES}"
         fi
 
+        # ── Append PR Instructions ──
+        if [[ "${{ inputs.dry_run }}" == "false" ]]; then
+          FULL_MISSION="${FULL_MISSION}
+
+          IMPORTANT: After completing the changes, you MUST create a Pull Request using the GitHub MCP tools.
+          - Title: ${{ inputs.pr_title }}
+          - Body: ${{ inputs.pr_body }}
+          - Base: ${{ inputs.pr_base }}
+          - Labels: ${{ inputs.pr_labels }}
+          "
+          if [[ -n "${{ inputs.pr_branch }}" ]]; then
+            FULL_MISSION="${FULL_MISSION}
+            - Branch: ${{ inputs.pr_branch }}
+            "
+          fi
+        else
+          FULL_MISSION="${FULL_MISSION}
+          
+          NOTE: dry_run is set to TRUE. Do NOT create a Pull Request. Just verify the changes and report what you would have done.
+          "
+        fi
+
         # Build model flags
         MODEL_FLAGS=""
         if [[ -n "${MODEL}" ]]; then
@@ -362,18 +384,4 @@ runs:
         fi
 
         echo "::endgroup::"
-
-    # ── 8. Create Pull Request (Optional) ───────────────────────────────
-    - name: Create Pull Request
-      if: ${{ inputs.dry_run == 'false' }}
-      uses: peter-evans/create-pull-request@v6
-      with:
-        token: ${{ inputs.github_token }}
-        commit-message: "${{ inputs.pr_title }}"
-        title: ${{ inputs.pr_title }}
-        body: ${{ inputs.pr_body }}
-        branch: ${{ inputs.pr_branch }}
-        base: ${{ inputs.pr_base }}
-        labels: ${{ inputs.pr_labels }}
-        delete-branch: true
 
