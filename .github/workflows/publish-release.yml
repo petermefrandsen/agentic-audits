@@ -1,0 +1,93 @@
+name: Publish Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  publish:
+    name: Publish New Release
+    runs-on: ubuntu-24.04
+    # Only run if it's a PR merge (commits on main often have PR titles)
+    if: github.event.head_commit.message != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+
+      - name: Identify PR and Labels
+        id: pr-info
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          # Find associated PR
+          PR_DATA=$(gh api -X GET "repos/${{ github.repository }}/commits/$COMMIT_SHA/pulls" --jq '.[0]')
+          if [ -z "$PR_DATA" ] || [ "$PR_DATA" == "null" ]; then
+            echo "No associated PR found for commit $COMMIT_SHA. Skipping automated release."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
+          BUMP_LABEL=$(echo "$PR_DATA" | jq -r '.labels[].name' | grep '^bump:' | head -n 1 || true)
+
+          if [ -z "$BUMP_LABEL" ]; then
+            echo "No 'bump:*' label found on PR #$PR_NUMBER. Skipping automated release."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          BUMP_TYPE=${BUMP_LABEL#bump:}
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "Identified bump type: $BUMP_TYPE from PR #$PR_NUMBER"
+
+      - name: Calculate Next Version
+        if: steps.pr-info.outputs.skip != 'true'
+        id: versioning
+        shell: bash
+        run: |
+          LATEST_TAG=$(git tag -l --sort=-v:refname | head -n 1 || echo "v0.0.0")
+          NEXT_VERSION=$(./src/bump-version.sh "$LATEST_TAG" "${{ steps.pr-info.outputs.bump_type }}")
+          echo "next_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          echo "Bumping $LATEST_TAG -> $NEXT_VERSION"
+
+      - name: Configure Git
+        if: steps.pr-info.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and Push Tag
+        if: steps.pr-info.outputs.skip != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.versioning.outputs.next_version }}"
+          git tag -a "$VERSION" -m "Automated release $VERSION"
+          git push origin "$VERSION"
+
+      - name: Update Floating Major Tag
+        if: steps.pr-info.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.versioning.outputs.next_version }}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          git tag -fa "$MAJOR" -m "Update $MAJOR floating tag"
+          git push origin "$MAJOR" --force
+
+      - name: Create GitHub Release
+        if: steps.pr-info.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.versioning.outputs.next_version }}"
+          gh release create "$VERSION" \
+            --title "Release $VERSION" \
+            --generate-notes
