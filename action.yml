@@ -1,5 +1,5 @@
 name: "Agentic Audits"
-description: "A professional framework for running automated governance, audits, and refactoring missions using AI agents."
+description: "A CLI-agnostic framework for running automated governance, audits, and refactoring missions with full user control via AI agents."
 branding:
   icon: "crosshair"
   color: "blue"

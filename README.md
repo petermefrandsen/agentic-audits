@@ -4,7 +4,15 @@
 [![Go Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/petermefrandsen/19edde6ec0fe2f62bb54778db2eaad40/raw/coverage.json)](https://github.com/petermefrandsen/agentic-audits/actions/workflows/test-action.yml)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Agentic%20Audits-blue.svg)](https://github.com/marketplace/actions/agentic-audits)
 
-Automated governance for AI assets using headless GitHub Copilot agents.
+Automated governance for AI assets using headless GitHub Copilot agents - CLI agnostic and user-controlled.
+
+## 🛡️ Why CLI Agnostic?
+
+GitHub's native agents are great, but they are often locked into specific ecosystems. **Agentic Audits** puts you in control:
+
+- **CLI Agnostic**: Run any agent, any model, and any MCP server without lock-in.
+- **Full Control**: You own the mission, the context, and the execution flow.
+- **Headless & Scalable**: Designed for complex, cross-repo CI/CD workflows.
 
 ## 🚀 Key Features
 
