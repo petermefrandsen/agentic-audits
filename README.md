@@ -46,8 +46,13 @@ graph TD
 ## Setup
 
 1. **Add Secrets**: Add `COPILOT_GOV_TOKEN` to your repo secrets.
-2. **Review Sources**: Check `.github/sources.yml` to enable/disable documentation sources.
-3. **Local Development (Optional)**:
+2. **Configure Workflow Permissions**:
+   - Go to `Settings` > `Actions` > `General` in your repository.
+   - Under `Workflow permissions`, select **Read and write permissions**.
+   - Check the box for **Allow GitHub Actions to create and approve pull requests**.
+   - Click **Save**.
+3. **Review Sources**: Check `.github/sources.yml` to enable/disable documentation sources.
+4. **Local Development (Optional)**:
    - Run `npm install` to set up dependencies.
 
 
