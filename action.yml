@@ -69,191 +69,28 @@ runs:
     # ── 2. Install gh CLI ───────────────────────────────────────────────
     - name: Install GitHub CLI
       shell: bash
-      run: |
-        set -euo pipefail
-        if ! command -v gh &>/dev/null; then
-          echo "::group::Installing GitHub CLI"
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-            | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
-            https://cli.github.com/packages stable main" \
-            | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt-get update -qq && sudo apt-get install -y -qq gh
-          echo "::endgroup::"
-        fi
-        echo "gh version: $(gh --version | head -1)"
+      run: ${{ github.action_path }}/src/install_gh.sh
 
     # ── 3. Authenticate gh CLI ──────────────────────────────────────────
     - name: Configure GitHub CLI Auth
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
-      run: |
-        echo "Configuring gh auth manually to bypass scope validation..."
-        # Fetch username to satisfy gh validation
-        USERNAME=$(curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/user | grep '"login":' | awk -F'"' '{print $4}')
-        
-        if [ -z "$USERNAME" ]; then
-          echo "Warning: Could not fetch username. Defaulting to 'headless-agent'."
-          USERNAME="headless-agent"
-        else
-          echo "Detected username: $USERNAME"
-        fi
-
-        mkdir -p ~/.config/gh
-        cat > ~/.config/gh/hosts.yml <<EOF
-        github.com:
-            user: "$USERNAME"
-            oauth_token: "$GH_TOKEN"
-            git_protocol: "https"
-        EOF
-        chmod 600 ~/.config/gh/hosts.yml
-        
-        # Verify status (warn only on failure)
-        gh auth status || echo "gh auth status reported issues, but config is present."
-        echo "::endgroup::"
+      run: ${{ github.action_path }}/src/configure_gh_auth.sh
 
     # ── 4. Install gh-copilot extension ─────────────────────────────────
     - name: Install gh-copilot extension
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
-      run: |
-        set -euo pipefail
-        echo "::group::Installing gh-copilot extension"
-        
-        # Check if gh copilot is already working (could be built-in or pre-installed)
-        if gh copilot --help >/dev/null 2>&1; then
-          echo "gh copilot is already available."
-        else
-          echo "Installing github/gh-copilot extension..."
-          gh extension install github/gh-copilot --force
-        fi
-        
-        echo "gh-copilot installed/verified successfully"
-        echo "::endgroup::"
+      run: ${{ github.action_path }}/src/install_gh_copilot.sh
 
     # ── 5. Load sources config, install MCP servers & configure ─────────
     - name: Load sources and configure Copilot MCP
       shell: bash
       env:
         SOURCES_CONFIG: ${{ inputs.sources_config }}
-      run: |
-        set -euo pipefail
-        echo "::group::Configuring sources"
-
-        CONFIG_DIR="${HOME}/.config/github-copilot"
-        CONFIG_FILE="${CONFIG_DIR}/config.json"
-        mkdir -p "${CONFIG_DIR}"
-
-        # Default: no MCP servers, no web sources
-        MCP_JSON='{}'
-        WEB_SOURCES=""
-
-        if [[ -n "${SOURCES_CONFIG}" && -f "${SOURCES_CONFIG}" ]]; then
-          echo "Loading sources from: ${SOURCES_CONFIG}"
-
-          # Use a single Node.js invocation to parse, install, and output config
-          PARSE_OUTPUT=$(node << 'PARSE_SCRIPT'
-        const fs = require('fs');
-        const path = process.env.SOURCES_CONFIG;
-
-        try {
-          const content = fs.readFileSync(path, 'utf8');
-          const lines = content.split('\n');
-          const sources = [];
-          let current = null;
-
-          for (const line of lines) {
-            const nameMatch = line.match(/^\s*-\s*name:\s*(.+)/);
-            if (nameMatch) {
-              if (current) sources.push(current);
-              current = { name: nameMatch[1].trim() };
-              continue;
-            }
-            if (!current) continue;
-            const typeMatch = line.match(/^\s*type:\s*(.+)/);
-            const packageMatch = line.match(/^\s*package:\s*["']?([^"']+)["']?/);
-            const urlMatch = line.match(/^\s*url:\s*["']?([^"']+)["']?/);
-            const enabledMatch = line.match(/^\s*enabled:\s*(.+)/);
-            if (typeMatch) current.type = typeMatch[1].trim();
-            if (packageMatch) current.package = packageMatch[1].trim();
-            if (urlMatch) current.url = urlMatch[1].trim();
-            if (enabledMatch) current.enabled = enabledMatch[1].trim() === 'true';
-          }
-          if (current) sources.push(current);
-
-          // Build MCP servers object from enabled mcp sources
-          const mcpServers = {};
-          const mcpPackages = [];
-          for (const s of sources) {
-            if (s.type === 'mcp' && s.enabled && s.package) {
-              mcpServers[s.name] = { command: 'npx', args: ['-y', s.package] };
-              mcpPackages.push(s.package);
-            }
-          }
-
-          // Collect enabled web source URLs
-          const webUrls = sources
-            .filter(s => s.type === 'web' && s.enabled && s.url)
-            .map(s => s.url);
-
-          // Output as JSON for the shell to consume
-          const output = {
-            mcpServers: mcpServers,
-            mcpPackages: mcpPackages,
-            webSources: webUrls.length > 0
-              ? 'Also consult these documentation sources: ' + webUrls.join(', ')
-              : ''
-          };
-          console.log(JSON.stringify(output));
-        } catch (e) {
-          console.log(JSON.stringify({ mcpServers: {}, mcpPackages: [], webSources: '' }));
-        }
-        PARSE_SCRIPT
-          )
-
-          # Extract values from parsed output
-          MCP_JSON=$(echo "${PARSE_OUTPUT}" | node -e "
-            const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-            console.log(JSON.stringify(d.mcpServers));
-          ")
-
-          WEB_SOURCES=$(echo "${PARSE_OUTPUT}" | node -e "
-            const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-            console.log(d.webSources);
-          ")
-
-          # Install MCP packages
-          PACKAGES=$(echo "${PARSE_OUTPUT}" | node -e "
-            const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-            d.mcpPackages.forEach(p => console.log(p));
-          ")
-
-          while IFS= read -r pkg; do
-            if [[ -n "${pkg}" ]]; then
-              echo "Installing MCP package: ${pkg}"
-              npm install -g "${pkg}" || echo "::warning::Failed to install ${pkg}"
-            fi
-          done <<< "${PACKAGES}"
-
-        else
-          echo "No sources config provided or file not found — running without MCP servers"
-        fi
-
-        # Write the Copilot config (empty mcpServers if none configured)
-        node -e "
-          const config = { mcpServers: ${MCP_JSON} };
-          require('fs').writeFileSync('${CONFIG_FILE}', JSON.stringify(config, null, 2));
-        "
-
-        echo "Copilot config written to ${CONFIG_FILE}"
-        cat "${CONFIG_FILE}"
-
-        # Export web sources for use in the mission step
-        echo "EXTRA_WEB_SOURCES=${WEB_SOURCES}" >> "${GITHUB_ENV}"
-
-        echo "::endgroup::"
+      run: ${{ github.action_path }}/src/configure_sources.sh
 
     # ── 6. Resolve Mission (Template or Input) ──────────────────────────
     - name: Resolve Mission
@@ -261,35 +98,7 @@ runs:
       env:
         INPUT_MISSION: ${{ inputs.mission }}
         INPUT_TEMPLATE: ${{ inputs.template }}
-      run: |
-        if [[ -n "$INPUT_MISSION" && -n "$INPUT_TEMPLATE" ]]; then
-          echo "::error::Both 'mission' and 'template' inputs are provided. Please use only one."
-          exit 1
-        fi
-
-        if [[ -z "$INPUT_MISSION" && -z "$INPUT_TEMPLATE" ]]; then
-          echo "::error::Either 'mission' or 'template' input must be provided."
-          exit 1
-        fi
-
-        if [[ -n "$INPUT_TEMPLATE" ]]; then
-          TEMPLATE_PATH=".github/templates/${INPUT_TEMPLATE}.md"
-          if [[ ! -f "$TEMPLATE_PATH" ]]; then
-            echo "::error::Template file not found: $TEMPLATE_PATH"
-            exit 1
-          fi
-          echo "Resolved mission from template: $TEMPLATE_PATH"
-          MISSION_CONTENT=$(cat "$TEMPLATE_PATH")
-        else
-          MISSION_CONTENT="$INPUT_MISSION"
-        fi
-        
-        # Export RESOLVED_MISSION safely
-        {
-          echo "RESOLVED_MISSION<<EOF"
-          echo "$MISSION_CONTENT"
-          echo "EOF"
-        } >> "$GITHUB_ENV"
+      run: ${{ github.action_path }}/src/resolve_mission.sh
 
     # ── 7. Run the agent mission (with model fallback) ──────────────────
     - name: Execute agent mission
@@ -298,101 +107,13 @@ runs:
         GH_TOKEN: ${{ inputs.github_token }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
         COPILOT_GITHUB_TOKEN: ${{ inputs.github_token }}
-        # Use the resolved mission from previous step
-        # We access it via the env var we just set
         CONTEXT_FILES: ${{ inputs.context_files }}
         MODEL: ${{ inputs.model }}
         FALLBACK_MODEL: ${{ inputs.fallback_model }}
-      run: |
-        set -euo pipefail
-        
-        # Explicitly export tokens to ensure Copilot CLI sees them
-        export COPILOT_GITHUB_TOKEN="${GH_TOKEN}"
-        export GITHUB_TOKEN="${GH_TOKEN}"
-
-        # Get the mission content from the env var set in previous step
-        AGENT_MISSION="${RESOLVED_MISSION}"
-        echo "Context:        ${CONTEXT_FILES}"
-        echo "Model:          ${MODEL:-auto}"
-        echo "Fallback Model: ${FALLBACK_MODEL:-none}"
-        echo "---"
-
-        # Build the full prompt including web sources
-        FULL_MISSION="${AGENT_MISSION} (context files: ${CONTEXT_FILES})"
-        if [[ -n "${EXTRA_WEB_SOURCES:-}" ]]; then
-          FULL_MISSION="${FULL_MISSION}. ${EXTRA_WEB_SOURCES}"
-        fi
-
-        # ── Append PR Instructions ──
-        if [[ "${{ inputs.dry_run }}" == "false" ]]; then
-          FULL_MISSION="${FULL_MISSION}
-
-          
-          ### MANDATORY: Pull Request Creation
-          You MUST create a Pull Request for your changes using the \`create_pull_request\` tool from the GitHub MCP server. 
-          
-          PR Specifications:
-          - **Repository**: ${{ github.repository }}
-          - **Base Branch**: ${{ inputs.pr_base }}
-          - **Branch Name**: ${{ inputs.pr_branch != '' && inputs.pr_branch || 'Generate a unique branch name like agent/audit-<timestamp>' }}
-          
-          - **Title**: ${{ inputs.pr_title != '' && inputs.pr_title || 'Use STRICT Conventional Commits format (e.g., refactor(skills): [AI-GENERATED] audit and clarify instructions).' }}
-          
-          - **Body**: ${{ inputs.pr_body != '' && inputs.pr_body || 'You MUST provide a comprehensive, elite-quality description structured as follows:
-              ### 🔎 Audit Overview
-              Provide a high-level technical summary of what was audited and the general state of the skills.
-              
-              ### 🛠 Detailed Changes
-              Provide a per-skill breakdown of specific technical improvements (e.g., Skill X: Removed 40% verbosity, updated paths to match current source tree).
-              
-              ### ⚠️ Manual Review Required
-              List any specific files where you added <!-- ISSUE --> comments because they require human intervention.' }}
-          
-          - **Labels**: ${{ inputs.pr_labels }}
-          "
-        else
-          FULL_MISSION="${FULL_MISSION}
-          
-          NOTE: dry_run is set to TRUE. Do NOT create a Pull Request. Just verify the changes and report what you would have done.
-          "
-        fi
-
-        # Build model flags
-        MODEL_FLAGS=""
-        if [[ -n "${MODEL}" ]]; then
-          MODEL_FLAGS="--model ${MODEL}"
-        fi
-
-        # ── Attempt with primary model ──
-        run_agent() {
-          local flags="${1:-}"
-          # shellcheck disable=SC2086
-          gh copilot \
-            --allow-all-tools \
-            -p "${FULL_MISSION}" \
-            ${flags} \
-            2>&1
-        }
-
-        if run_agent "${MODEL_FLAGS}"; then
-          echo "Agent mission completed successfully."
-        else
-          EXIT_CODE=$?
-          echo "::warning::Primary model failed (exit code: ${EXIT_CODE})"
-
-          if [[ -n "${FALLBACK_MODEL}" ]]; then
-            echo "Retrying with fallback model: ${FALLBACK_MODEL}"
-            FALLBACK_FLAGS="--model ${FALLBACK_MODEL}"
-            if run_agent "${FALLBACK_FLAGS}"; then
-              echo "Agent mission completed with fallback model."
-            else
-              echo "::error::Agent mission failed with both primary and fallback models"
-              exit 1
-            fi
-          else
-            echo "::error::Agent mission failed and no fallback model is configured"
-            exit 1
-          fi
-        fi
-
-        echo "::endgroup::"
+        DRY_RUN: ${{ inputs.dry_run }}
+        PR_BASE: ${{ inputs.pr_base }}
+        PR_BRANCH: ${{ inputs.pr_branch }}
+        PR_TITLE: ${{ inputs.pr_title }}
+        PR_BODY: ${{ inputs.pr_body }}
+        PR_LABELS: ${{ inputs.pr_labels }}
+      run: ${{ github.action_path }}/src/execute_mission.sh
