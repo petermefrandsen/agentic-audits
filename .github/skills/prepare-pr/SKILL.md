@@ -41,24 +41,15 @@ request for review, rather than pushed directly to the default branch.
    git push origin "${BRANCH}"
    ```
 
-5. **Open a Pull Request** using `gh pr create`:
+5. **Open a Pull Request** using `gh pr create`. Always use the project's PR template at `.github/pull_request_template.md`:
    ```bash
    gh pr create \
      --title "<type>(<scope>): <summary>" \
-     --body "## Summary
-   <what this PR does>
-
-   ## Changes
-   - <file 1>: <what changed>
-   - <file 2>: <what changed>
-
-   ## Agent Mission
-   > <original mission prompt>
-
-   ---
-   _This PR was created by an automated agent._" \
+     --body-file .github/pull_request_template.md \
      --base main
    ```
+
+6. **Update PR Body**. After creating the PR with the template, update the description using `gh pr edit` to include specific details about your changes, keeping the template structure intact.
 
 ## Rules
 
