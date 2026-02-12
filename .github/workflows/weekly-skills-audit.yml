@@ -5,7 +5,7 @@
 # action. Copy and adapt it for your own repository and use case.
 # ─────────────────────────────────────────────────────────────────────────────
 
-name: "Weekly Prompt Audit"
+name: "Weekly Skills Audit"
 
 on:
   schedule:
@@ -19,23 +19,22 @@ permissions:
 
 jobs:
   prompt-audit:
-    name: "Audit Prompt Files"
+    name: "Audit Skills Files"
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Run prompt audit agent
+      - name: Run skills audit agent
         uses: ./.github/actions/headless-agent
         with:
-          template: "prompt-audit"
-          context_files: "prompts/**/*.md"
+          template: "skills-audit"
+          context_files: "**/skills/*.md"
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
           model: "gpt-5-mini"
           fallback_model: "gpt-4.1"
           
-          # Built-in PR Creation
           # Built-in PR Creation
           pr_labels: "automated-pr"

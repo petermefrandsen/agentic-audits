@@ -62,9 +62,9 @@ runs:
   steps:
     # ── 1. Install Node.js ──────────────────────────────────────────────
     - name: Set up Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
       with:
-        node-version: "20"
+        node-version: "24"
 
     # ── 2. Install gh CLI ───────────────────────────────────────────────
     - name: Install GitHub CLI
@@ -335,7 +335,7 @@ runs:
              - Title: ${{ inputs.pr_title }}"
           else
              FULL_MISSION="${FULL_MISSION}
-             - Title: Generate a concise, conventional commit style title describing your changes."
+             - Title: Generate a concise, conventional commit style title describing your changes., e.g. refactor(skills): [ai-generated] <summary of changes>"
           fi
 
           if [[ -n "${{ inputs.pr_body }}" ]]; then
@@ -343,7 +343,10 @@ runs:
              - Body: ${{ inputs.pr_body }}"
           else
              FULL_MISSION="${FULL_MISSION}
-             - Body: Generate a detailed description of the changes made."
+             - Body: Generate a detailed description of the changes made., e.g. 
+             - List the skills modified.
+             - Summarize key changes (e.g., "Removed verbosity", "Fixed ambiguous outcome", "Added safety check").
+             - Highlight any <!-- ISSUE --> comments added."
           fi
 
           FULL_MISSION="${FULL_MISSION}
@@ -402,4 +405,3 @@ runs:
         fi
 
         echo "::endgroup::"
-
