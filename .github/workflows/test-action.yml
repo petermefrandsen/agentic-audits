@@ -48,7 +48,6 @@ jobs:
 
       - name: Update coverage badge
         uses: schneegans/dynamic-badges-action@v1.7.0
-        if: github.ref_name == 'main'
         with:
           auth: ${{ secrets.COVERAGE_GIST_SECRET }}
           gistID: ${{ secrets.COVERAGE_GIST_ID }}
