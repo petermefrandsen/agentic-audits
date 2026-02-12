@@ -54,6 +54,7 @@ jobs:
             -f "files[coverage.json][content]=$(cat coverage.json)"
 
       - name: Run headless-agent (Dry Run)
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         uses: ./
         with:
           mission: "Analyze the repository README.md and suggest 3 improvements. Do not implement anything."
