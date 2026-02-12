@@ -28,15 +28,31 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          # Find associated PR
+          echo "Processing commit: $COMMIT_SHA"
+          
+          # Method 1: GitHub API Commits Pulls
           PR_DATA=$(gh api -X GET "repos/${{ github.repository }}/commits/$COMMIT_SHA/pulls" --jq '.[0]')
-          if [ -z "$PR_DATA" ] || [ "$PR_DATA" == "null" ]; then
+          
+          if [ -n "$PR_DATA" ] && [ "$PR_DATA" != "null" ]; then
+            PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
+            echo "Found PR #$PR_NUMBER via API"
+          else
+            # Method 2: Parse from commit message (e.g., "Merge pull request #18 from...")
+            COMMIT_MSG=$(git log -1 --pretty=%B "$COMMIT_SHA")
+            PR_NUMBER=$(echo "$COMMIT_MSG" | grep -oP '(?<=Merge pull request #)\d+' || echo "$COMMIT_MSG" | grep -oP '(?<=\(#)\d+(?=\)$)' || true)
+            
+            if [ -n "$PR_NUMBER" ]; then
+              echo "Found PR #$PR_NUMBER via commit message parsing"
+              PR_DATA=$(gh api -X GET "repos/${{ github.repository }}/pulls/$PR_NUMBER")
+            fi
+          fi
+
+          if [ -z "$PR_NUMBER" ] || [ -z "$PR_DATA" ] || [ "$PR_DATA" == "null" ]; then
             echo "No associated PR found for commit $COMMIT_SHA. Skipping automated release."
             echo "skip=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
           BUMP_LABEL=$(echo "$PR_DATA" | jq -r '.labels[].name' | grep '^bump:' | head -n 1 || true)
 
           if [ -z "$BUMP_LABEL" ]; then
