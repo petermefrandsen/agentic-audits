@@ -6,8 +6,13 @@ description: >
 
 inputs:
   mission:
-    description: "The agent mission prompt to execute."
-    required: true
+    description: "The agent mission prompt to execute. Required if 'template' is not provided."
+    required: false
+    default: ""
+  template:
+    description: "Name of a template file in .github/templates/ (without extension). Mutually exclusive with 'mission'."
+    required: false
+    default: ""
   context_files:
     description: "File paths or globs for the agent to consider."
     required: false
@@ -27,6 +32,30 @@ inputs:
     description: "Path to a YAML file defining documentation sources (MCP servers, web URLs). If the file doesn't exist, no sources are configured."
     required: false
     default: ".github/sources.yml"
+  dry_run:
+    description: "If true, skips PR creation."
+    required: false
+    default: "false"
+  pr_title:
+    description: "Title for the Pull Request."
+    required: false
+    default: "chore: Automated User Changes"
+  pr_body:
+    description: "Body content for the Pull Request."
+    required: false
+    default: "This PR was created automatically by the agent."
+  pr_branch:
+    description: "Branch name for the Pull Request. Defaults to agent/mission-{run_id}."
+    required: false
+    default: ""
+  pr_base:
+    description: "Base branch for the Pull Request."
+    required: false
+    default: "main"
+  pr_labels:
+    description: "Labels to add to the Pull Request."
+    required: false
+    default: "automated-pr"
 
 runs:
   using: "composite"
@@ -226,14 +255,51 @@ runs:
 
         echo "::endgroup::"
 
-    # ── 6. Run the agent mission (with model fallback) ──────────────────
+    # ── 6. Resolve Mission (Template or Input) ──────────────────────────
+    - name: Resolve Mission
+      shell: bash
+      env:
+        INPUT_MISSION: ${{ inputs.mission }}
+        INPUT_TEMPLATE: ${{ inputs.template }}
+      run: |
+        if [[ -n "$INPUT_MISSION" && -n "$INPUT_TEMPLATE" ]]; then
+          echo "::error::Both 'mission' and 'template' inputs are provided. Please use only one."
+          exit 1
+        fi
+
+        if [[ -z "$INPUT_MISSION" && -z "$INPUT_TEMPLATE" ]]; then
+          echo "::error::Either 'mission' or 'template' input must be provided."
+          exit 1
+        fi
+
+        if [[ -n "$INPUT_TEMPLATE" ]]; then
+          TEMPLATE_PATH=".github/templates/${INPUT_TEMPLATE}.md"
+          if [[ ! -f "$TEMPLATE_PATH" ]]; then
+            echo "::error::Template file not found: $TEMPLATE_PATH"
+            exit 1
+          fi
+          echo "Resolved mission from template: $TEMPLATE_PATH"
+          MISSION_CONTENT=$(cat "$TEMPLATE_PATH")
+        else
+          MISSION_CONTENT="$INPUT_MISSION"
+        fi
+        
+        # Export RESOLVED_MISSION safely
+        {
+          echo "RESOLVED_MISSION<<EOF"
+          echo "$MISSION_CONTENT"
+          echo "EOF"
+        } >> "$GITHUB_ENV"
+
+    # ── 7. Run the agent mission (with model fallback) ──────────────────
     - name: Execute agent mission
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
         COPILOT_GITHUB_TOKEN: ${{ inputs.github_token }}
-        AGENT_MISSION: ${{ inputs.mission }}
+        # Use the resolved mission from previous step
+        # We access it via the env var we just set
         CONTEXT_FILES: ${{ inputs.context_files }}
         MODEL: ${{ inputs.model }}
         FALLBACK_MODEL: ${{ inputs.fallback_model }}
@@ -243,9 +309,9 @@ runs:
         # Explicitly export tokens to ensure Copilot CLI sees them
         export COPILOT_GITHUB_TOKEN="${GH_TOKEN}"
         export GITHUB_TOKEN="${GH_TOKEN}"
-        
-        echo "::group::Agent Mission"
-        echo "Mission:        ${AGENT_MISSION}"
+
+        # Get the mission content from the env var set in previous step
+        AGENT_MISSION="${RESOLVED_MISSION}"
         echo "Context:        ${CONTEXT_FILES}"
         echo "Model:          ${MODEL:-auto}"
         echo "Fallback Model: ${FALLBACK_MODEL:-none}"
@@ -296,3 +362,18 @@ runs:
         fi
 
         echo "::endgroup::"
+
+    # ── 8. Create Pull Request (Optional) ───────────────────────────────
+    - name: Create Pull Request
+      if: ${{ inputs.dry_run == 'false' }}
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ inputs.github_token }}
+        commit-message: "${{ inputs.pr_title }}"
+        title: ${{ inputs.pr_title }}
+        body: ${{ inputs.pr_body }}
+        branch: ${{ inputs.pr_branch }}
+        base: ${{ inputs.pr_base }}
+        labels: ${{ inputs.pr_labels }}
+        delete-branch: true
+

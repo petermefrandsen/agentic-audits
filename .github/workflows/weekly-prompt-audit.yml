@@ -30,27 +30,17 @@ jobs:
       - name: Run prompt audit agent
         uses: ./.github/actions/headless-agent
         with:
-          mission: |
-            Review all markdown files in /prompts.
-            Check each file for clarity, safety, and conciseness.
-            Flag any prompts that contain ambiguous instructions, unsafe patterns,
-            or unnecessary verbosity.
-            If improvements are found, rewrite the file in-place with the improved version.
-            Provide a summary of all changes made.
+          template: "prompt-audit"
           context_files: "prompts/**/*.md"
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
           model: "gpt-5-mini"
           fallback_model: "gpt-4.1"
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(prompts): automated audit updates"
-          title: "chore: Weekly Prompt Audit"
-          body: |
+          
+          # Built-in PR Creation
+          pr_title: "chore: Weekly Prompt Audit"
+          pr_body: |
             This PR was created automatically by the Weekly Prompt Audit workflow.
             
             The agent has reviewed prompt files and made improvements for clarity, safety, or conciseness.
-          branch: "agent/prompt-audit-${{ github.run_id }}"
-          delete-branch: true
+          pr_branch: "agent/prompt-audit-${{ github.run_id }}"
+          pr_labels: "automated-pr"

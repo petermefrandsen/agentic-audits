@@ -1,0 +1,16 @@
+name: "Test Hub PR Logic"
+on: workflow_dispatch
+
+jobs:
+  test-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Agent with Template and Dry Run
+        uses: ./.github/actions/headless-agent
+        with:
+          template: "prompt-audit"
+          context_files: "prompts/**/*.md" # Ensure context files are provided or default is used
+          github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
+          model: "gpt-4o-mini"
+          dry_run: "true"
