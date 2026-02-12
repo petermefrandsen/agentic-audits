@@ -329,7 +329,7 @@ runs:
 
           
           ### MANDATORY: Pull Request Creation
-          You MUST create a Pull Request for your changes using the `create_pull_request` tool from the GitHub MCP server. 
+          You MUST create a Pull Request for your changes using the \`create_pull_request\` tool from the GitHub MCP server. 
           
           PR Specifications:
           - **Repository**: ${{ github.repository }}
@@ -338,7 +338,15 @@ runs:
           
           - **Title**: ${{ inputs.pr_title != '' && inputs.pr_title || 'Use STRICT Conventional Commits format (e.g., refactor(skills): [AI-GENERATED] audit and clarify instructions).' }}
           
-          - **Body**: ${{ inputs.pr_body != '' && inputs.pr_body || 'You MUST provide a comprehensive, elaborate description including: 1) Overview: A summary of findings. 2) Detailed Changes: A bulleted list of modified files and specific improvements. 3) Issues Found: Explicitly list any <!-- ISSUE --> comments added.' }}
+          - **Body**: ${{ inputs.pr_body != '' && inputs.pr_body || 'You MUST provide a comprehensive, elite-quality description structured as follows:
+              ### 🔎 Audit Overview
+              Provide a high-level technical summary of what was audited and the general state of the skills.
+              
+              ### 🛠 Detailed Changes
+              Provide a per-skill breakdown of specific technical improvements (e.g., "Skill X: Removed 40% verbosity, updated paths to match current source tree").
+              
+              ### ⚠️ Manual Review Required
+              List any specific files where you added <!-- ISSUE --> comments because they require human intervention.' }}
           
           - **Labels**: ${{ inputs.pr_labels }}
           "
