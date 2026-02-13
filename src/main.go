@@ -37,6 +37,11 @@ func run(args []string, executor cli.CommandExecutor, httpClient HTTPClient) err
 		return err
 	}
 
+	fmt.Printf("::debug::Raw Args: %v\n", args)
+	fmt.Printf("::debug::Parsed CLI: %s\n", *cliName)
+	fmt.Printf("::debug::Parsed Model: %s\n", *model)
+	fmt.Printf("::debug::Parsed DryRun: %v\n", *dryRun)
+
 	// Select CLI
 	var aiCLI cli.AICLI
 	switch strings.ToLower(*cliName) {
