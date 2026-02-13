@@ -12,6 +12,50 @@ permissions:
   pull-requests: write
 
 jobs:
+  dry-run-test:
+    name: "Dry Run Test"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        cli: [copilot, gemini]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Run Unit Tests
+        run: make test
+
+
+      - name: Go Coverage report
+        uses: gwatts/go-coverage-action@v2
+        id: coverage
+        with:
+          coverage-threshold: 80
+          cover-pkg: ./src/...
+
+          ignore-pattern: |
+            \.pb\.go$
+            \_string\.go$
+
+      - name: Update coverage badge
+        if: github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.COVERAGE_GIST_SECRET }}
+          GIST_ID: ${{ secrets.COVERAGE_GIST_ID }}
+        run: |
+          COVERAGE="${{ steps.coverage.outputs.coverage-pct-1dp }}"
+          COLOR="${{ steps.coverage.outputs.meets-threshold == 'true' && 'green' || 'red' }}"
+          # Create a shields.io compatible JSON
+          echo "{\"schemaVersion\": 1, \"label\": \"Go Coverage\", \"message\": \"$COVERAGE%\", \"color\": \"$COLOR\"}" > coverage.json
+          
+          # Use gh api to update the Gist. This works even if the file doesn't exist.
+          gh api -X PATCH /gists/$GIST_ID \
+            -f "files[coverage.json][content]=$(cat coverage.json)"
+
       - name: Run headless-agent (Dry Run)
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         uses: ./
@@ -27,5 +71,3 @@ jobs:
       - name: Detailed Coverage Report
         if: github.event_name == 'pull_request'
         run: make coverage-report
-
-
