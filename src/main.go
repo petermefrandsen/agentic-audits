@@ -94,6 +94,11 @@ func run(args []string, executor cli.CommandExecutor, httpClient HTTPClient) err
 			}
 		} else if *cliName == "gemini" {
 			authToken = os.Getenv("GEMINI_API_KEY")
+			if authToken == "" {
+				fmt.Println("::error::GEMINI_API_KEY is missing or empty in environment!")
+			} else {
+				fmt.Println("::debug::GEMINI_API_KEY found in environment.")
+			}
 			// We still need GH auth for PR creation!
 			if *githubToken != "" {
 				if err := configureGitHubAuth(httpClient, *githubToken); err != nil {

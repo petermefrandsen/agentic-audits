@@ -50,6 +50,7 @@ func TestGeminiCLI_Run(t *testing.T) {
 			foundURL := false
 			foundHeader := false
 			foundFail := false
+			foundShowBlock := false
 			for _, arg := range args {
 				if strings.Contains(arg, "generateContent") {
 					foundURL = true
@@ -59,6 +60,9 @@ func TestGeminiCLI_Run(t *testing.T) {
 				}
 				if arg == "-f" {
 					foundFail = true
+				}
+				if arg == "-S" {
+					foundShowBlock = true
 				}
 			}
 
@@ -71,6 +75,9 @@ func TestGeminiCLI_Run(t *testing.T) {
 			}
 			if !foundFail {
 				return fmt.Errorf("expected -f flag in args")
+			}
+			if !foundShowBlock {
+				return fmt.Errorf("expected -S flag in args")
 			}
 			return nil
 		},
