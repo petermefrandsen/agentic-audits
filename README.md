@@ -43,6 +43,7 @@ Add this to your `.github/workflows/agent-audit.yml`:
 | `mission` | ⚠️ | — | The mission prompt. Required if `template` is not used. |
 | `template` | ⚠️ | — | Path to a mission template in `.github/templates/`. |
 | `github_token` | ✅ | — | GitHub token with Copilot access. |
+| `cli` | | `copilot` | AI CLI to use (`copilot` or `gemini`). |
 | `context_files`| | `.` | Files or globs for the agent to consider. |
 | `model` | | *(auto)*| Primary Copilot model to use (e.g. `gpt-5-mini`, `gpt-4.1`). |
 | `fallback_model` | | *(none)*| Fallback model if the primary model hits a quota or error. |

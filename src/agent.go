@@ -6,11 +6,16 @@ import (
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/petermefrandsen/agentic-audits/src/cli"
 )
 
-type CommandExecutor interface {
-	RunCommand(name string, args []string, env []string, stdout, stderr io.Writer) error
-}
+// CommandExecutor is defined here as well or we can use the one in cli package if we export it.
+// To avoid duplication, let's strictly use the one in `cli` package if possible, or alias it.
+// But `main` package is special.
+// Let's redefine it here or use `cli.CommandExecutor`?
+// If we use `cli.CommandExecutor` we need to import `cli`.
+// Let's use `cli.CommandExecutor` for consistency.
 
 type RealCommandExecutor struct{}
 
@@ -22,17 +27,16 @@ func (e *RealCommandExecutor) RunCommand(name string, args []string, env []strin
 	return cmd.Run()
 }
 
-
 type AgentOptions struct {
 	FullMission   string
 	ContextFiles  string
 	Model         string
 	FallbackModel string
 	DryRun        bool
-	GithubToken   string
-	Executor      CommandExecutor
+	GithubToken   string // Still needed for PR creation prompting? Yes.
+	Executor      cli.CommandExecutor
+	CLI           cli.AICLI
 }
-
 
 func constructFullPrompt(mission string, options AgentOptions, webSources string) string {
 	fullMission := fmt.Sprintf("%s (context files: %s)", mission, options.ContextFiles)
@@ -53,7 +57,7 @@ PR Specifications:
 - **Title**: %s
 - **Body**: %s
 - **Labels**: %s
-`, 
+`,
 			os.Getenv("GITHUB_REPOSITORY"),
 			getEnvOrDefault("PR_BASE", "main"),
 			getEnvOrDefault("PR_BRANCH", fmt.Sprintf("agent/audit-%d", time.Now().Unix())),
@@ -79,27 +83,16 @@ NOTE: dry_run is set to TRUE. Do NOT create a Pull Request. Just verify the chan
 	return fullMission
 }
 
-func runAgent(executor CommandExecutor, prompt string, model string, token string) error {
-	args := []string{"copilot", "--allow-all-tools", "-p", prompt}
-	if model != "" {
-		args = append(args, "--model", model)
-	}
-
-	env := append(os.Environ(),
-		"COPILOT_GITHUB_TOKEN="+token,
-		"GITHUB_TOKEN="+token,
-	)
-
-	fmt.Printf("Running agent with model: %s\n", model)
-	return executor.RunCommand("gh", args, env, os.Stdout, os.Stderr)
+func runAgent(cli cli.AICLI, executor cli.CommandExecutor, prompt string, model string) error {
+	// The `cli` handles the command construction and env injection
+	return cli.Run(executor, prompt, model)
 }
-
 
 func executeMission(options AgentOptions, webSources string) error {
 	fullPrompt := constructFullPrompt(options.FullMission, options, webSources)
 
 	// Attempt with primary model
-	err := runAgent(options.Executor, fullPrompt, options.Model, options.GithubToken)
+	err := runAgent(options.CLI, options.Executor, fullPrompt, options.Model)
 	if err == nil {
 		fmt.Println("Agent mission completed successfully.")
 		return nil
@@ -109,7 +102,7 @@ func executeMission(options AgentOptions, webSources string) error {
 
 	if options.FallbackModel != "" {
 		fmt.Printf("Retrying with fallback model: %s\n", options.FallbackModel)
-		err = runAgent(options.Executor, fullPrompt, options.FallbackModel, options.GithubToken)
+		err = runAgent(options.CLI, options.Executor, fullPrompt, options.FallbackModel)
 		if err == nil {
 			fmt.Println("Agent mission completed with fallback model.")
 			return nil
@@ -119,7 +112,6 @@ func executeMission(options AgentOptions, webSources string) error {
 
 	return fmt.Errorf("agent mission failed and no fallback model is configured: %w", err)
 }
-
 
 func getEnvOrDefault(name, defaultValue string) string {
 	if val := os.Getenv(name); val != "" {
