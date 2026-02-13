@@ -41,19 +41,16 @@ request for review, rather than pushed directly to the default branch.
    git push origin "${BRANCH}"
    ```
 
-5. **Prepare PR Body**. Read the template at `.github/pull_request_template.md`, create a temporary file `pr_body.md`, and **FILL IT OUT**.
-   - detailed summary of changes.
-   - check relevant checkboxes (change `[ ]` to `[x]`).
-   - describe tests performed.
-
-6. **Open PR**. Use the filled-out temporary file:
+5. **Open a Pull Request** using `gh pr create`. Always use the project's PR template at `.github/pull_request_template.md`:
    ```bash
    gh pr create \
      --title "<type>(<scope>): <summary>" \
-     --body-file pr_body.md \
+     --body-file .github/pull_request_template.md \
      --base main
-   rm pr_body.md
+
    ```
+
+6. **Update PR Body**. After creating the PR with the template, update the description using `gh pr edit` to include specific details about your changes, keeping the template structure intact.
 
 ## Rules
 
