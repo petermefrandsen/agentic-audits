@@ -82,6 +82,7 @@ func (c *GeminiCLI) Run(executor CommandExecutor, prompt string, model string) e
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent", model)
 	args := []string{
 		"-s",
+		"-f", // Fail silently (no output at all) on server errors
 		"-X", "POST",
 		url,
 		"-H", "Content-Type: application/json",

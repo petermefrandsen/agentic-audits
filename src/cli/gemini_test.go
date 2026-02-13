@@ -46,15 +46,19 @@ func TestGeminiCLI_Run(t *testing.T) {
 			if name != "curl" {
 				return fmt.Errorf("expected curl command")
 			}
-			// Verify arguments contain URL and headers
+			// Verify arguments contain URL, headers, and fail flag
 			foundURL := false
 			foundHeader := false
+			foundFail := false
 			for _, arg := range args {
 				if strings.Contains(arg, "generateContent") {
 					foundURL = true
 				}
 				if strings.Contains(arg, "x-goog-api-key: test-token") {
 					foundHeader = true
+				}
+				if arg == "-f" {
+					foundFail = true
 				}
 			}
 
@@ -64,6 +68,9 @@ func TestGeminiCLI_Run(t *testing.T) {
 			if !foundHeader {
 				// We expect token in header now
 				return fmt.Errorf("expected api key header in args")
+			}
+			if !foundFail {
+				return fmt.Errorf("expected -f flag in args")
 			}
 			return nil
 		},
