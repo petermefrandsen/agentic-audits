@@ -96,5 +96,5 @@ runs:
           --context-files "$CONTEXT_FILES" \
           --model "$MODEL" \
           --fallback-model "$FALLBACK_MODEL" \
-          --dry-run "${DRY_RUN:-false}" \
-          --cli "${CLI:-copilot}"
+          --dry-run="${DRY_RUN:-false}" \
+          --cli="${CLI:-copilot}"
