@@ -20,7 +20,7 @@ jobs:
       matrix:
         include:
           - cli: copilot
-            model: "gpt-5-mini"
+            model: "gpt-4o"
           - cli: gemini
             model: "gemini-1.5-flash"
     

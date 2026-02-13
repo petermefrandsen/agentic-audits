@@ -51,8 +51,8 @@ jobs:
             Provide a summary of what was updated and why.
           context_files: ${{ inputs.internal_doc_path }}
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
-          model: "gpt-5-mini"
-          fallback_model: "gpt-4.1"
+          model: "gpt-4o"
+          fallback_model: "gpt-4o-mini"
           sources_config: ${{ inputs.sources_config }}
 
           # Built-in PR Creation via MCP

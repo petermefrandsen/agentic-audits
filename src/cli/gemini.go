@@ -44,7 +44,7 @@ func (c *GeminiCLI) Run(executor CommandExecutor, prompt string, model string) e
 		return fmt.Errorf("token (GEMINI_API_KEY) not set, call Auth first")
 	}
 	if model == "" {
-		model = "gemini-pro"
+		model = "gemini-1.5-flash"
 	}
 
 	// Create request body
