@@ -20,6 +20,10 @@ inputs:
   github_token:
     description: "GitHub token with Copilot access for authentication."
     required: true
+  cli:
+    description: "AI CLI to use (copilot or gemini)."
+    required: false
+    default: "copilot"
   model:
     description: "Primary Copilot model to use (e.g. gpt-4o, claude-sonnet-4). Leave blank for default."
     required: false
@@ -72,6 +76,7 @@ runs:
         MODEL: ${{ inputs.model }}
         FALLBACK_MODEL: ${{ inputs.fallback_model }}
         DRY_RUN: ${{ inputs.dry_run }}
+        CLI: ${{ inputs.cli }}
         PR_BASE: ${{ inputs.pr_base }}
         PR_BRANCH: ${{ inputs.pr_branch }}
         PR_TITLE: ${{ inputs.pr_title }}
@@ -91,4 +96,5 @@ runs:
           --context-files "$CONTEXT_FILES" \
           --model "$MODEL" \
           --fallback-model "$FALLBACK_MODEL" \
-          --dry-run "${DRY_RUN:-false}"
+          --dry-run="${DRY_RUN:-false}" \
+          --cli="${CLI:-copilot}"

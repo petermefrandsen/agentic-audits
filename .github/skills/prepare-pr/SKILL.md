@@ -47,6 +47,7 @@ request for review, rather than pushed directly to the default branch.
      --title "<type>(<scope>): <summary>" \
      --body-file .github/pull_request_template.md \
      --base main
+
    ```
 
 6. **Update PR Body**. After creating the PR with the template, update the description using `gh pr edit` to include specific details about your changes, keeping the template structure intact.

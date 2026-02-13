@@ -16,6 +16,13 @@ jobs:
     name: "Dry Run Test"
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    strategy:
+      matrix:
+        include:
+          - cli: copilot
+            model: "gpt-5-mini"
+          - cli: gemini
+            model: "gemini-1.5-flash"
     
     steps:
       - name: Checkout repository
@@ -56,14 +63,15 @@ jobs:
       - name: Run headless-agent (Dry Run)
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         uses: ./
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           mission: "Analyze the repository README.md and suggest 3 improvements. Do not implement anything."
           dry_run: "true"
           github_token: ${{ secrets.COPILOT_GOV_TOKEN }}
-          model: "gpt-5-mini"
+          model: ${{ matrix.model }}
+          cli: ${{ matrix.cli }}
 
       - name: Detailed Coverage Report
         if: github.event_name == 'pull_request'
         run: make coverage-report
-
-
