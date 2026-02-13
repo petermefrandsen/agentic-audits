@@ -12,8 +12,8 @@ func TestGeminiCLI_Install(t *testing.T) {
 	mock := &MockCommandExecutor{
 		RunFunc: func(name string, args []string, env []string, stdout, stderr io.Writer) error {
 			callCount++
-			if name != "sh" {
-				return fmt.Errorf("expected sh command")
+			if name != "curl" {
+				return fmt.Errorf("expected curl command, got %s", name)
 			}
 			return nil
 		},
@@ -43,17 +43,27 @@ func TestGeminiCLI_Auth(t *testing.T) {
 func TestGeminiCLI_Run(t *testing.T) {
 	mock := &MockCommandExecutor{
 		RunFunc: func(name string, args []string, env []string, stdout, stderr io.Writer) error {
-			if name != "gemini" {
-				return fmt.Errorf("expected gemini command")
+			if name != "curl" {
+				return fmt.Errorf("expected curl command")
 			}
-			foundToken := false
-			for _, e := range env {
-				if strings.HasPrefix(e, "GEMINI_API_KEY=") {
-					foundToken = true
+			// Verify arguments contain URL and headers
+			foundURL := false
+			foundHeader := false
+			for _, arg := range args {
+				if strings.Contains(arg, "generateContent") {
+					foundURL = true
+				}
+				if strings.Contains(arg, "x-goog-api-key: test-token") {
+					foundHeader = true
 				}
 			}
-			if !foundToken {
-				return fmt.Errorf("expected GEMINI_API_KEY in env")
+
+			if !foundURL {
+				return fmt.Errorf("expected URL in args")
+			}
+			if !foundHeader {
+				// We expect token in header now
+				return fmt.Errorf("expected api key header in args")
 			}
 			return nil
 		},

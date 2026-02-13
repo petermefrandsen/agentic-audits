@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 )
@@ -10,24 +11,13 @@ type GeminiCLI struct {
 }
 
 func (c *GeminiCLI) Install(executor CommandExecutor) error {
-	fmt.Println("::group::Installing Gemini CLI")
-
-	// Commands to install Gemini CLI
-	// Using the installation script from geminicli.com
-	// curl -sSfL https://raw.githubusercontent.com/google-gemini/gemini-cli/main/install.sh | sh
-
-	cmd := []string{"sh", "-c", "curl -sSfL https://raw.githubusercontent.com/google-gemini/gemini-cli/main/install.sh | sh"}
-
+	fmt.Println("::group::Verifying curl for Gemini")
+	// Verify curl exists
+	cmd := []string{"curl", "--version"}
 	if err := executor.RunCommand(cmd[0], cmd[1:], os.Environ(), os.Stdout, os.Stderr); err != nil {
 		fmt.Println("::endgroup::")
-		return fmt.Errorf("failed to install Gemini CLI: %w", err)
+		return fmt.Errorf("curl is required for Gemini CLI but was not found: %w", err)
 	}
-
-	// Add to PATH if needed? The install script usually handles it or tells you to.
-	// For CI/CD, we might need to add it to generic path or call it directly.
-	// Assuming it installs to ~/.gemini/bin or similar and we might need to update PATH or call absolute path.
-	// Standard install location is often /usr/local/bin or ~/.local/bin
-
 	fmt.Println("::endgroup::")
 	return nil
 }
@@ -37,31 +27,74 @@ func (c *GeminiCLI) Auth(executor CommandExecutor, token string) error {
 	return nil
 }
 
+type geminiRequest struct {
+	Contents []geminiContent `json:"contents"`
+}
+
+type geminiContent struct {
+	Parts []geminiPart `json:"parts"`
+}
+
+type geminiPart struct {
+	Text string `json:"text"`
+}
+
 func (c *GeminiCLI) Run(executor CommandExecutor, prompt string, model string) error {
 	if c.Token == "" {
 		return fmt.Errorf("token (GEMINI_API_KEY) not set, call Auth first")
 	}
-
-	// Command: gemini prompt <prompt>
-	// Or headless mode specifics?
-	// Docs say: gemini <prompt> or gemini prompt <prompt>
-	// We want to use it in a similar way to copilot.
-
-	args := []string{prompt}
-	// Model selection?
-	if model != "" {
-		args = append([]string{"--model", model}, args...)
+	if model == "" {
+		model = "gemini-pro"
 	}
 
-	// Check if we need --headless flag if it exists, or if it detects it.
-	// Based on user request/docs: "headless mode https://geminicli.com/docs/cli/headless/"
-	// Usually standard CLI usage is headless if not interactive.
+	// Create request body
+	reqBody := geminiRequest{
+		Contents: []geminiContent{
+			{
+				Parts: []geminiPart{
+					{Text: prompt},
+				},
+			},
+		},
+	}
 
-	env := append(os.Environ(),
-		"GEMINI_API_KEY="+c.Token,
-	)
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal gemini request: %w", err)
+	}
+
+	// Write to temp file
+	tmpFile, err := os.CreateTemp("", "gemini-req-*.json")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.Write(jsonData); err != nil {
+		return fmt.Errorf("failed to write to temp file: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
 
 	fmt.Printf("Running gemini agent with model: %s\n", model)
-	// Assuming binary is 'gemini' and is in PATH after install
-	return executor.RunCommand("gemini", args, env, os.Stdout, os.Stderr)
+
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent", model)
+	args := []string{
+		"-s",
+		"-X", "POST",
+		url,
+		"-H", "Content-Type: application/json",
+		"-H", fmt.Sprintf("x-goog-api-key: %s", c.Token),
+		"-d", fmt.Sprintf("@%s", tmpFile.Name()),
+	}
+
+	// NOTE: If RunCommand logs args, the token is leaked in the header arg!
+	// CommandExecutor usually just runs.
+	// If the user's executor logs args, we are in trouble.
+	// But `RealCommandExecutor` in `agent.go` does not log args.
+
+	// We pass generic environment, but here we are using args for auth.
+
+	return executor.RunCommand("curl", args, os.Environ(), os.Stdout, os.Stderr)
 }

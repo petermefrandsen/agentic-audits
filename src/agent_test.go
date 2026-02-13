@@ -7,8 +7,9 @@ import (
 	"os"
 	"strings"
 	"testing"
-)
 
+	"github.com/petermefrandsen/agentic-audits/src/cli"
+)
 
 func TestConstructFullPrompt(t *testing.T) {
 	os.Setenv("GITHUB_REPOSITORY", "test/repo")
@@ -44,6 +45,33 @@ func TestConstructFullPrompt(t *testing.T) {
 	}
 }
 
+type MockAICLI struct {
+	InstallFunc func(executor cli.CommandExecutor) error
+	AuthFunc    func(executor cli.CommandExecutor, token string) error
+	RunFunc     func(executor cli.CommandExecutor, prompt string, model string) error
+}
+
+func (m *MockAICLI) Install(executor cli.CommandExecutor) error {
+	if m.InstallFunc != nil {
+		return m.InstallFunc(executor)
+	}
+	return nil
+}
+
+func (m *MockAICLI) Auth(executor cli.CommandExecutor, token string) error {
+	if m.AuthFunc != nil {
+		return m.AuthFunc(executor, token)
+	}
+	return nil
+}
+
+func (m *MockAICLI) Run(executor cli.CommandExecutor, prompt string, model string) error {
+	if m.RunFunc != nil {
+		return m.RunFunc(executor, prompt, model)
+	}
+	return nil
+}
+
 func TestExecuteMission(t *testing.T) {
 	t.Run("Primary success", func(t *testing.T) {
 		executor := &MockCommandExecutor{
@@ -51,7 +79,12 @@ func TestExecuteMission(t *testing.T) {
 				return nil
 			},
 		}
-		opts := AgentOptions{Executor: executor}
+		mockCLI := &MockAICLI{
+			RunFunc: func(executor cli.CommandExecutor, prompt string, model string) error {
+				return nil
+			},
+		}
+		opts := AgentOptions{Executor: executor, CLI: mockCLI}
 		err := executeMission(opts, "")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -62,6 +95,11 @@ func TestExecuteMission(t *testing.T) {
 		callCount := 0
 		executor := &MockCommandExecutor{
 			RunFunc: func(name string, args []string, env []string, stdout, stderr io.Writer) error {
+				return nil
+			},
+		}
+		mockCLI := &MockAICLI{
+			RunFunc: func(executor cli.CommandExecutor, prompt string, model string) error {
 				callCount++
 				if callCount == 1 {
 					return fmt.Errorf("primary failed")
@@ -72,6 +110,7 @@ func TestExecuteMission(t *testing.T) {
 		opts := AgentOptions{
 			Executor:      executor,
 			FallbackModel: "fallback",
+			CLI:           mockCLI,
 		}
 		err := executeMission(opts, "")
 		if err != nil {
@@ -85,12 +124,18 @@ func TestExecuteMission(t *testing.T) {
 	t.Run("Both fail", func(t *testing.T) {
 		executor := &MockCommandExecutor{
 			RunFunc: func(name string, args []string, env []string, stdout, stderr io.Writer) error {
+				return nil
+			},
+		}
+		mockCLI := &MockAICLI{
+			RunFunc: func(executor cli.CommandExecutor, prompt string, model string) error {
 				return fmt.Errorf("fail")
 			},
 		}
 		opts := AgentOptions{
 			Executor:      executor,
 			FallbackModel: "fallback",
+			CLI:           mockCLI,
 		}
 		err := executeMission(opts, "")
 		if err == nil {
